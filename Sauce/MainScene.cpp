@@ -94,7 +94,7 @@ int MainScene::GetSpawnIntervalFrames() const
 	const float progress = GetDifficultyProgress();
 	int interval = static_cast<int>(
 		SPAWN_INTERVAL_MAX_FRAMES - (SPAWN_INTERVAL_MAX_FRAMES - SPAWN_INTERVAL_MIN_FRAMES) * progress);
-	
+
 	if (GameSession::GetDifficulty() == GameDifficulty::Easy)
 	{
 		interval = static_cast<int>(interval * 1.5f);
@@ -256,7 +256,7 @@ void MainScene::Update()
 	}
 
 	if (m_hitFlashTimer > 0) --m_hitFlashTimer;
-	if (m_feverTimer > 0)      --m_feverTimer;
+	if (m_feverTimer > 0)    --m_feverTimer;
 }
 
 void MainScene::EndGame(bool isGameOver)
@@ -286,7 +286,6 @@ bool MainScene::IsEntityOffScreen(const GameEntity& entity) const
 
 void MainScene::OnEntityFallOffScreen(GameEntity& entity)
 {
-	// 妨害は落ちて消えても何もしない（クリックしなかった正解扱い）
 	if (entity.kind == EntityKind::Obstacle)
 	{
 		return;
@@ -317,7 +316,6 @@ void MainScene::UpdateEntities()
 			continue;
 		}
 
-		// 残り時間が減るほど既存オブジェクトも少しずつ加速
 		if (entity.vy < fallSpeed)
 		{
 			entity.vy += 0.04f;
@@ -334,14 +332,14 @@ void MainScene::UpdateEntities()
 		{
 			const float left = static_cast<float>(ROOM_LEFT) + entity.halfWidth;
 			const float right = static_cast<float>(ROOM_RIGHT) - entity.halfWidth;
-			if (entity.x < left)  { entity.x = left;  entity.vx = std::fabs(entity.vx); }
+			if (entity.x < left) { entity.x = left;  entity.vx = std::fabs(entity.vx); }
 			if (entity.x > right) { entity.x = right; entity.vx = -std::fabs(entity.vx); }
 		}
 		else
 		{
 			const float left = static_cast<float>(ROOM_LEFT) + entity.radius;
 			const float right = static_cast<float>(ROOM_RIGHT) - entity.radius;
-			if (entity.x < left)  { entity.x = left;  entity.vx = std::fabs(entity.vx); }
+			if (entity.x < left) { entity.x = left;  entity.vx = std::fabs(entity.vx); }
 			if (entity.x > right) { entity.x = right; entity.vx = -std::fabs(entity.vx); }
 		}
 
@@ -422,6 +420,9 @@ void MainScene::UpdateInput()
 	const float roomMouseX = static_cast<float>(mouseX);
 	const float roomMouseY = static_cast<float>(mouseY);
 
+	// 難易度によるスコア倍率計算（進行度0.0～1.0に対し、1.0～2.0倍のボーナス）
+	const float difficultyBonus = 1.0f + GetDifficultyProgress();
+
 	for (int i = 0; i < MAX_FALLING_ENTITIES; ++i)
 	{
 		GameEntity& entity = m_entities[i];
@@ -445,28 +446,30 @@ void MainScene::UpdateInput()
 			continue;
 		}
 
-		int gainedScore = 0;
+		int baseScore = 0;
 		const int feverBonus = (m_feverTimer > 0) ? 2 : 1;
 
 		if (entity.kind == EntityKind::Animal)
 		{
-			gainedScore = 120 * feverBonus;
+			baseScore = 120;
 			++m_combo;
 			m_comboTimer = TARGET_FPS * 2;
 			if (m_combo > m_maxCombo) m_maxCombo = m_combo;
-			gainedScore += m_combo * 15;
+			baseScore += m_combo * 15;
 			SpawnPopup(entity.x, entity.y - entity.radius - 10.0f, entity.crime);
 		}
 		else
 		{
-			gainedScore = 35 * feverBonus;
+			baseScore = 35;
 			++m_combo;
 			m_comboTimer = TARGET_FPS * 2;
 			if (m_combo > m_maxCombo) m_maxCombo = m_combo;
-			gainedScore += m_combo * 5;
+			baseScore += m_combo * 5;
 			SpawnPopup(entity.x, entity.y, entity.crime);
 		}
 
+		// 難易度ボーナスとフィーバー倍率を適用
+		int gainedScore = static_cast<int>(baseScore * difficultyBonus * feverBonus);
 		m_score += gainedScore;
 	}
 }
@@ -530,7 +533,6 @@ void MainScene::DrawPlayArea()
 		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
 	}
 
-	// 落下開始ライン
 	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 60);
 	DrawBox(ROOM_LEFT, ROOM_TOP - 4, ROOM_RIGHT, ROOM_TOP + 2, GetColor(180, 220, 255), TRUE);
 	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
@@ -602,7 +604,7 @@ void MainScene::DrawUI()
 	SetFontSize(24);
 	DrawFormatString(20, 20, GetColor(220, 230, 255), STR_MAIN_TIMER, m_timeLeftSec);
 	DrawFormatString(220, 20, GetColor(255, 230, 180), STR_MAIN_SCORE, m_score);
-	
+
 	const wchar_t* diffStr = GameSession::GetDifficulty() == GameDifficulty::Easy ? STR_DIFF_EASY : STR_DIFF_NORMAL;
 	DrawFormatString(1000, 20, GetColor(200, 255, 200), L"%s", diffStr);
 
@@ -628,7 +630,6 @@ void MainScene::DrawUI()
 	SetFontSize(18);
 	DrawFormatString(24, SCREEN_HEIGHT - 36, GetColor(180, 180, 200), STR_MAIN_HINT);
 
-	// 残り時間が少ないほど難易度上昇の目安表示
 	if (m_timeLeftSec <= RUSH_WARNING_SEC)
 	{
 		SetFontSize(22);

@@ -6,19 +6,15 @@
 
 namespace
 {
+	// 50音表のように並べるため、空白マスには半角スペース(L' ')を配置
 	static const wchar_t HIRAGANA_TABLE[] =
-		L"\u3042\u3044\u3046\u3048\u304A"   // あいうえお
-		L"\u304B\u304D\u304F\u3051\u3053"   // かきくけこ
-		L"\u3055\u3057\u3059\u305B\u305D"   // さしすせそ
-		L"\u305F\u3061\u3064\u3066\u3068"   // たちつてと
-		L"\u306A\u306B\u306C\u306D\u306E"   // なにぬねの
-		L"\u306F\u3072\u3075\u3078\u307B"   // はひふへほ
-		L"\u307E\u307F\u3080\u3081\u3082"   // まみむめも
-		L"\u3084\u3086\u3088"               // やゆよ
-		L"\u3089\u308A\u308B\u308C\u308D"   // らりるれろ
-		L"\u308F\u3092\u3093";              // わをん
+		L"\u308F\u3089\u3084\u307E\u306F\u306A\u305F\u3055\u304B\u3042" // わらやまはなたさかあ
+		L"\u3092\u308A \u307F\u3072\u306B\u3061\u3057\u304D\u3044"      // をり(空)みひにちしきい
+		L"\u3093\u308B\u3086\u3080\u3075\u306C\u3064\u3059\u304F\u3046" // んるゆむふぬつすくう
+		L" \u308C \u3081\u3078\u306D\u3066\u305B\u3051\u3048"           // (空)れ(空)めへねてせけえ
+		L" \u308D\u3088\u3082\u307B\u306E\u3068\u305D\u3053\u304A";      // (空)ろよもほのとそこお
 
-	static const int HIRAGANA_COUNT = 46;
+	static const int HIRAGANA_COUNT = 50;
 	static const int KEY_COLS = 10;
 	static const int KEY_W = 44;
 	static const int KEY_H = 34;
@@ -48,6 +44,12 @@ void NameInput::Update(int panelX, int panelY)
 
 	for (int i = 0; i < HIRAGANA_COUNT; ++i)
 	{
+		// 空白マスの場合は判定をスキップ
+		if (HIRAGANA_TABLE[i] == L' ')
+		{
+			continue;
+		}
+
 		const int col = i % KEY_COLS;
 		const int row = i / KEY_COLS;
 		const int left = keysLeft + col * (KEY_W + KEY_GAP);
@@ -100,6 +102,12 @@ void NameInput::Draw(int x, int y, int labelColor, int textColor) const
 
 	for (int i = 0; i < HIRAGANA_COUNT; ++i)
 	{
+		// 空白マスの場合はボタンを描画しない
+		if (HIRAGANA_TABLE[i] == L' ')
+		{
+			continue;
+		}
+
 		const int col = i % KEY_COLS;
 		const int row = i / KEY_COLS;
 		const int left = keysLeft + col * (KEY_W + KEY_GAP);
