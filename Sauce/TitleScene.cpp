@@ -1,4 +1,4 @@
-#include "TitleScene.h"
+Ôªø#include "TitleScene.h"
 
 #include "GameConfig.h"
 #include "GameStrings.h"
@@ -11,14 +11,16 @@ namespace
 {
 	static const int BTN_LEFT = 440;
 	static const int BTN_RIGHT = 840;
-	static const int BTN_PLAY_TOP = 470;
-	static const int BTN_PLAY_BOTTOM = 520;
-	static const int BTN_RANK_TOP = 535;
-	static const int BTN_RANK_BOTTOM = 585;
-	static const int BTN_QUIT_TOP = 600;
-	static const int BTN_QUIT_BOTTOM = 650;
+	static const int BTN_PLAY_TOP = 410;
+	static const int BTN_PLAY_BOTTOM = 460;
+	static const int BTN_SETTING_TOP = 475;
+	static const int BTN_SETTING_BOTTOM = 525;
+	static const int BTN_RANK_TOP = 540;
+	static const int BTN_RANK_BOTTOM = 590;
+	static const int BTN_QUIT_TOP = 605;
+	static const int BTN_QUIT_BOTTOM = 655;
 
-	// ìÔà’ìxëIëÉ{É^ÉìÇÃç¿ïWÅiãSÇí«â¡ÇÃÇΩÇﬂä‘äuÇí≤êÆÅj
+	// Èõ£ÊòìÂ∫¶ÈÅ∏Êäû„Éú„Çø„É≥„ÅÆÂ∫ßÊ®ôÔºàÈ¨º„ÇíËøΩÂä†„ÅÆ„Åü„ÇÅÈñìÈöî„ÇíË™øÊï¥Ôºâ
 	static const int BTN_PLAY_EASY_TOP = 420;
 	static const int BTN_PLAY_EASY_BOTTOM = 465;
 	static const int BTN_PLAY_NORMAL_TOP = 480;
@@ -34,6 +36,7 @@ void TitleScene::Init()
 	m_mode = TitleMode::Normal;
 	m_requestGoMain = false;
 	m_requestGoRanking = false;
+	m_requestGoSetting = false;
 	m_nameInput.Reset();
 }
 
@@ -64,20 +67,26 @@ void TitleScene::Update()
 		}
 		return;
 	}
-
-	if (UiMouse::TryClick(BTN_LEFT, BTN_PLAY_TOP, BTN_RIGHT, BTN_PLAY_BOTTOM))
+	else
 	{
-		m_mode = TitleMode::SelectingDifficulty;
-	}
-	if (UiMouse::TryClick(BTN_LEFT, BTN_RANK_TOP, BTN_RIGHT, BTN_RANK_BOTTOM))
-	{
-		RankingManager::ClearHighlight();
-		RankingManager::SetReturnScene(SceneID::Title);
-		m_requestGoRanking = true;
-	}
-	if (UiMouse::TryClick(BTN_LEFT, BTN_QUIT_TOP, BTN_RIGHT, BTN_QUIT_BOTTOM))
-	{
-		GameSession::RequestQuit();
+		if (UiMouse::TryClick(BTN_LEFT, BTN_PLAY_TOP, BTN_RIGHT, BTN_PLAY_BOTTOM))
+		{
+			m_mode = TitleMode::SelectingDifficulty;
+		}
+		if (UiMouse::TryClick(BTN_LEFT, BTN_SETTING_TOP, BTN_RIGHT, BTN_SETTING_BOTTOM))
+		{
+			m_requestGoSetting = true;
+		}
+		if (UiMouse::TryClick(BTN_LEFT, BTN_RANK_TOP, BTN_RIGHT, BTN_RANK_BOTTOM))
+		{
+			RankingManager::ClearHighlight();
+			RankingManager::SetReturnScene(SceneID::Title);
+			m_requestGoRanking = true;
+		}
+		if (UiMouse::TryClick(BTN_LEFT, BTN_QUIT_TOP, BTN_RIGHT, BTN_QUIT_BOTTOM))
+		{
+			GameSession::RequestQuit();
+		}
 	}
 }
 
@@ -111,12 +120,13 @@ void TitleScene::Draw()
 	{
 		UiMouse::DrawButton(BTN_LEFT, BTN_PLAY_EASY_TOP, BTN_RIGHT, BTN_PLAY_EASY_BOTTOM, STR_BTN_PLAY_EASY);
 		UiMouse::DrawButton(BTN_LEFT, BTN_PLAY_NORMAL_TOP, BTN_RIGHT, BTN_PLAY_NORMAL_BOTTOM, STR_BTN_PLAY_NORMAL);
-		UiMouse::DrawButton(BTN_LEFT, BTN_PLAY_HELL_TOP, BTN_RIGHT, BTN_PLAY_HELL_BOTTOM, L"ãS");
+		UiMouse::DrawButton(BTN_LEFT, BTN_PLAY_HELL_TOP, BTN_RIGHT, BTN_PLAY_HELL_BOTTOM, L"È¨º");
 		UiMouse::DrawButton(BTN_LEFT, BTN_CANCEL_TOP, BTN_RIGHT, BTN_CANCEL_BOTTOM, STR_BTN_CANCEL);
 	}
 	else
 	{
 		UiMouse::DrawButton(BTN_LEFT, BTN_PLAY_TOP, BTN_RIGHT, BTN_PLAY_BOTTOM, STR_BTN_PLAY);
+		UiMouse::DrawButton(BTN_LEFT, BTN_SETTING_TOP, BTN_RIGHT, BTN_SETTING_BOTTOM, L"\u8A2D\u5B9A");
 		UiMouse::DrawButton(BTN_LEFT, BTN_RANK_TOP, BTN_RIGHT, BTN_RANK_BOTTOM, STR_BTN_RANKING);
 		UiMouse::DrawButton(BTN_LEFT, BTN_QUIT_TOP, BTN_RIGHT, BTN_QUIT_BOTTOM, STR_BTN_QUIT);
 	}
@@ -126,5 +136,6 @@ SceneID TitleScene::GetNextSceneID() const
 {
 	if (m_requestGoRanking) return SceneID::Ranking;
 	if (m_requestGoMain) return SceneID::Main;
+	if (m_requestGoSetting) return SceneID::Setting;
 	return SceneID::None;
 }

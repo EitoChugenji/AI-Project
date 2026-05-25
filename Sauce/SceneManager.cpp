@@ -5,6 +5,10 @@
 #include "ResultScene.h"
 #include "RankingScene.h"
 #include "RankingManager.h"
+#include "SettingScene.h"
+#include "GameConfig.h"
+#include "GameSession.h"
+#include "DxLib.h"
 
 // =============================================================================
 // SceneManager.cpp
@@ -29,11 +33,93 @@ SceneManager::~SceneManager()
 void SceneManager::SetFirstScene(SceneID firstSceneID)
 {
 	RankingManager::Load();
+	GameSession::LoadConfig();
 	ChangeScene(firstSceneID);
 }
 
 void SceneManager::Update()
 {
+	// Global mouse sensitivity scaling
+	{
+		int rawX = 0, rawY = 0;
+		GetMousePoint(&rawX, &rawY);
+
+		static int s_prevMouseX = 0;
+		static int s_prevMouseY = 0;
+		static float s_mouseXAcc = 0.0f;
+		static float s_mouseYAcc = 0.0f;
+		static bool s_mouseInitialized = false;
+		// SetMousePoint を呼んだ直後のフレームはデルタをスキップする
+		static bool s_skipNextDelta = false;
+
+		if (!s_mouseInitialized)
+		{
+			s_prevMouseX = rawX;
+			s_prevMouseY = rawY;
+			s_mouseXAcc = static_cast<float>(rawX);
+			s_mouseYAcc = static_cast<float>(rawY);
+			s_mouseInitialized = true;
+			s_skipNextDelta = false;
+		}
+		else
+		{
+			float sensitivity = GameSession::GetMouseSensitivity();
+			if (sensitivity != 1.0f)
+			{
+				if (s_skipNextDelta)
+				{
+					// SetMousePoint 直後フレーム: OSが返す座標を現在位置として記録するだけ
+					s_prevMouseX = rawX;
+					s_prevMouseY = rawY;
+					// 蓄積値もrawに合わせてリセット（丸め誤差を吸収）
+					s_mouseXAcc = static_cast<float>(rawX);
+					s_mouseYAcc = static_cast<float>(rawY);
+					s_skipNextDelta = false;
+				}
+				else
+				{
+					int dx = rawX - s_prevMouseX;
+					int dy = rawY - s_prevMouseY;
+
+					if (dx != 0 || dy != 0)
+					{
+						s_mouseXAcc += dx * sensitivity;
+						s_mouseYAcc += dy * sensitivity;
+
+						// Clamp to screen bounds
+						if (s_mouseXAcc < 0.0f) s_mouseXAcc = 0.0f;
+						if (s_mouseXAcc > SCREEN_WIDTH) s_mouseXAcc = static_cast<float>(SCREEN_WIDTH);
+						if (s_mouseYAcc < 0.0f) s_mouseYAcc = 0.0f;
+						if (s_mouseYAcc > SCREEN_HEIGHT) s_mouseYAcc = static_cast<float>(SCREEN_HEIGHT);
+
+						int targetX = static_cast<int>(s_mouseXAcc);
+						int targetY = static_cast<int>(s_mouseYAcc);
+
+						SetMousePoint(targetX, targetY);
+
+						s_prevMouseX = targetX;
+						s_prevMouseY = targetY;
+						s_skipNextDelta = true; // 次フレームはスキップ
+					}
+					else
+					{
+						// 動いていないときは prev を追従させる
+						s_prevMouseX = rawX;
+						s_prevMouseY = rawY;
+					}
+				}
+			}
+			else
+			{
+				s_prevMouseX = rawX;
+				s_prevMouseY = rawY;
+				s_mouseXAcc = static_cast<float>(rawX);
+				s_mouseYAcc = static_cast<float>(rawY);
+				s_skipNextDelta = false;
+			}
+		}
+	}
+
 	// 現在のシーンが無ければ何もしない（安全のため）
 	if (m_currentScene == nullptr)
 	{
@@ -80,6 +166,9 @@ SceneBase* SceneManager::CreateScene(SceneID sceneID)
 
 	case SceneID::Ranking:
 		return new RankingScene();
+
+	case SceneID::Setting:
+		return new SettingScene();
 
 	default:
 		// 想定外のIDのときはタイトルにフォールバック

@@ -1,5 +1,7 @@
 #include "GameSession.h"
+#include <cstdio>
 
+float GameSession::s_mouseSensitivity = 1.0f;
 int GameSession::s_lastScore = 0;
 int GameSession::s_lastMaxCombo = 0;
 bool GameSession::s_isGameOver = false;
@@ -59,4 +61,40 @@ void GameSession::SetDifficulty(GameDifficulty diff)
 GameDifficulty GameSession::GetDifficulty()
 {
 	return s_difficulty;
+}
+
+float GameSession::GetMouseSensitivity()
+{
+	return s_mouseSensitivity;
+}
+
+void GameSession::SetMouseSensitivity(float value)
+{
+	s_mouseSensitivity = value;
+	if (s_mouseSensitivity < 0.1f) s_mouseSensitivity = 0.1f;
+	if (s_mouseSensitivity > 3.0f) s_mouseSensitivity = 3.0f;
+}
+
+void GameSession::LoadConfig()
+{
+	FILE* fp = nullptr;
+	if (fopen_s(&fp, "config.dat", "r") == 0 && fp != nullptr)
+	{
+		float val = 1.0f;
+		if (fscanf_s(fp, "%f", &val) == 1)
+		{
+			SetMouseSensitivity(val);
+		}
+		fclose(fp);
+	}
+}
+
+void GameSession::SaveConfig()
+{
+	FILE* fp = nullptr;
+	if (fopen_s(&fp, "config.dat", "w") == 0 && fp != nullptr)
+	{
+		fprintf_s(fp, "%.2f", s_mouseSensitivity);
+		fclose(fp);
+	}
 }

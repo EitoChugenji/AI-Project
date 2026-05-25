@@ -20,6 +20,7 @@ enum class SceneID
 	Main,       // メインゲーム画面（クリッカー本体）
 	Result,     // リザルト画面
 	Ranking,    // ランキング表示
+	Setting     // 設定画面
 };
 
 // すべてのシーンの親クラス（抽象クラス）

@@ -22,5 +22,6 @@ private:
 	TitleMode m_mode;
 	bool m_requestGoMain;
 	bool m_requestGoRanking;
+	bool m_requestGoSetting;
 	NameInput m_nameInput;
 };

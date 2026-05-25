@@ -22,7 +22,13 @@ public:
 	static void SetDifficulty(GameDifficulty diff);
 	static GameDifficulty GetDifficulty();
 
+	static float GetMouseSensitivity();
+	static void SetMouseSensitivity(float value);
+	static void LoadConfig();
+	static void SaveConfig();
+
 private:
+	static float s_mouseSensitivity;
 	static int s_lastScore;
 	static int s_lastMaxCombo;
 	static bool s_isGameOver;
