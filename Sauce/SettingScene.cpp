@@ -1,12 +1,32 @@
-#include "SettingScene.h"
+﻿#include "SettingScene.h"
 #include "DxLib.h"
 #include "GameConfig.h"
 #include "GameSession.h"
 #include "UiMouse.h"
 
+// スライダーのレイアウト定数
+namespace
+{
+	const int SLIDER_X_START = 440;
+	const int SLIDER_X_END   = 840;
+	const int SLIDER_WIDTH   = SLIDER_X_END - SLIDER_X_START;
+
+	// 感度スライダー
+	const int SENS_SLIDER_Y  = 310;
+	const float SENS_MIN     = 0.1f;
+	const float SENS_MAX     = 3.0f;
+
+	// カーソルサイズスライダー
+	const int CUR_SLIDER_Y   = 430;
+	const float CUR_MIN      = 4.0f;
+	const float CUR_MAX      = 60.0f;
+}
+
 SettingScene::SettingScene()
 	: m_mouseSensitivity(1.0f)
 	, m_isDraggingSlider(false)
+	, m_cursorRadius(8.0f)
+	, m_isDraggingCursorSlider(false)
 	, m_requestGoTitle(false)
 {
 }
@@ -17,48 +37,41 @@ SettingScene::~SettingScene()
 
 void SettingScene::Init()
 {
-	m_mouseSensitivity = GameSession::GetMouseSensitivity();
-	m_isDraggingSlider = false;
-	m_requestGoTitle = false;
+	m_mouseSensitivity      = GameSession::GetMouseSensitivity();
+	m_cursorRadius          = GameSession::GetCursorRadius();
+	m_isDraggingSlider      = false;
+	m_isDraggingCursorSlider = false;
+	m_requestGoTitle        = false;
 }
 
 void SettingScene::Update()
 {
 	UiMouse::UpdateFrame();
 
-	const int sliderXStart = 440;
-	const int sliderXEnd = 840;
-	const int sliderY = 350;
-	const int sliderWidth = sliderXEnd - sliderXStart;
-
-	// Mouse inputs
 	int mx = 0, my = 0;
 	GetMousePoint(&mx, &my);
-	const int mouseInput = GetMouseInput();
+	const int mouseInput  = GetMouseInput();
 	const bool leftPressed = (mouseInput & MOUSE_INPUT_LEFT) != 0;
 
-	float minSens = 0.1f;
-	float maxSens = 3.0f;
-
-	// Dragging logic
+	// ==============================
+	// 感度スライダー
+	// ==============================
 	if (leftPressed)
 	{
 		if (!m_isDraggingSlider)
 		{
-			// Check if click starts inside slider bounding box (with padding)
-			if (mx >= sliderXStart - 10 && mx <= sliderXEnd + 10 &&
-				my >= sliderY - 20 && my <= sliderY + 20)
+			if (mx >= SLIDER_X_START - 10 && mx <= SLIDER_X_END + 10 &&
+				my >= SENS_SLIDER_Y - 20  && my <= SENS_SLIDER_Y + 20)
 			{
 				m_isDraggingSlider = true;
 			}
 		}
-
 		if (m_isDraggingSlider)
 		{
-			float ratio = static_cast<float>(mx - sliderXStart) / static_cast<float>(sliderWidth);
+			float ratio = static_cast<float>(mx - SLIDER_X_START) / static_cast<float>(SLIDER_WIDTH);
 			if (ratio < 0.0f) ratio = 0.0f;
 			if (ratio > 1.0f) ratio = 1.0f;
-			m_mouseSensitivity = minSens + ratio * (maxSens - minSens);
+			m_mouseSensitivity = SENS_MIN + ratio * (SENS_MAX - SENS_MIN);
 			GameSession::SetMouseSensitivity(m_mouseSensitivity);
 		}
 	}
@@ -67,24 +80,63 @@ void SettingScene::Update()
 		m_isDraggingSlider = false;
 	}
 
-	// Fine-tune decrease (-) button
-	if (UiMouse::TryClick(380, sliderY - 20, 420, sliderY + 20))
+	// 感度 ± ボタン
+	if (UiMouse::TryClick(380, SENS_SLIDER_Y - 20, 420, SENS_SLIDER_Y + 20))
 	{
 		m_mouseSensitivity -= 0.05f;
-		if (m_mouseSensitivity < minSens) m_mouseSensitivity = minSens;
+		if (m_mouseSensitivity < SENS_MIN) m_mouseSensitivity = SENS_MIN;
 		GameSession::SetMouseSensitivity(m_mouseSensitivity);
 	}
-
-	// Fine-tune increase (+) button
-	if (UiMouse::TryClick(860, sliderY - 20, 900, sliderY + 20))
+	if (UiMouse::TryClick(860, SENS_SLIDER_Y - 20, 900, SENS_SLIDER_Y + 20))
 	{
 		m_mouseSensitivity += 0.05f;
-		if (m_mouseSensitivity > maxSens) m_mouseSensitivity = maxSens;
+		if (m_mouseSensitivity > SENS_MAX) m_mouseSensitivity = SENS_MAX;
 		GameSession::SetMouseSensitivity(m_mouseSensitivity);
 	}
 
-	// Save and return button
-	if (UiMouse::TryClick(440, 500, 840, 550))
+	// ==============================
+	// カーソルサイズスライダー
+	// ==============================
+	if (leftPressed)
+	{
+		if (!m_isDraggingCursorSlider)
+		{
+			if (mx >= SLIDER_X_START - 10 && mx <= SLIDER_X_END + 10 &&
+				my >= CUR_SLIDER_Y - 20   && my <= CUR_SLIDER_Y + 20)
+			{
+				m_isDraggingCursorSlider = true;
+			}
+		}
+		if (m_isDraggingCursorSlider)
+		{
+			float ratio = static_cast<float>(mx - SLIDER_X_START) / static_cast<float>(SLIDER_WIDTH);
+			if (ratio < 0.0f) ratio = 0.0f;
+			if (ratio > 1.0f) ratio = 1.0f;
+			m_cursorRadius = CUR_MIN + ratio * (CUR_MAX - CUR_MIN);
+			GameSession::SetCursorRadius(m_cursorRadius);
+		}
+	}
+	else
+	{
+		m_isDraggingCursorSlider = false;
+	}
+
+	// カーソルサイズ ± ボタン
+	if (UiMouse::TryClick(380, CUR_SLIDER_Y - 20, 420, CUR_SLIDER_Y + 20))
+	{
+		m_cursorRadius -= 2.0f;
+		if (m_cursorRadius < CUR_MIN) m_cursorRadius = CUR_MIN;
+		GameSession::SetCursorRadius(m_cursorRadius);
+	}
+	if (UiMouse::TryClick(860, CUR_SLIDER_Y - 20, 900, CUR_SLIDER_Y + 20))
+	{
+		m_cursorRadius += 2.0f;
+		if (m_cursorRadius > CUR_MAX) m_cursorRadius = CUR_MAX;
+		GameSession::SetCursorRadius(m_cursorRadius);
+	}
+
+	// 保存して戻るボタン
+	if (UiMouse::TryClick(440, 530, 840, 580))
 	{
 		GameSession::SaveConfig();
 		m_requestGoTitle = true;
@@ -93,10 +145,8 @@ void SettingScene::Update()
 
 void SettingScene::Draw()
 {
-	// Dark space background
+	// 背景
 	DrawBox(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, GetColor(15, 10, 8), TRUE);
-
-	// Gentle background star particles
 	for (int i = 0; i < 40; ++i)
 	{
 		int x = (i * 37) % SCREEN_WIDTH;
@@ -104,40 +154,75 @@ void SettingScene::Draw()
 		DrawCircle(x, y, 1, GetColor(100, 100, 130), TRUE);
 	}
 
-	// Center settings panel
-	DrawBox(200, 200, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 100, GetColor(40, 28, 22), TRUE);
-	DrawBox(200, 200, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 100, GetColor(180, 140, 100), FALSE);
+	// パネル
+	DrawBox(200, 80, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 60, GetColor(40, 28, 22), TRUE);
+	DrawBox(200, 80, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 60, GetColor(180, 140, 100), FALSE);
 
-	// Header
-	DrawFormatString(SCREEN_WIDTH / 2 - 64, 120, GetColor(255, 245, 210), L"\u8A2D\u5B9A\u753B\u9762");
+	// タイトル
+	SetFontSize(36);
+	DrawFormatString(SCREEN_WIDTH / 2 - 72, 100, GetColor(255, 245, 210), L"設定画面");
 
-	// Instructions and Value
-	DrawFormatString(SCREEN_WIDTH / 2 - 150, 240, GetColor(230, 230, 230), L"\u30DE\u30A6\u30B9\u306E\u64CD\u4F5C\u901F\u5EA6\u3092\u8ABF\u6574\u3057\u307E\u3059\u3002");
-	DrawFormatString(SCREEN_WIDTH / 2 - 80, 280, GetColor(255, 255, 255), L"\u30DE\u30A6\u30B9\u611F\u5EA6: %.2f", m_mouseSensitivity);
+	// ==============================
+	// 感度スライダー
+	// ==============================
+	SetFontSize(24);
+	DrawFormatString(SCREEN_WIDTH / 2 - 160, 200, GetColor(230, 230, 230), L"マウスの操作速度を調整します。");
+	DrawFormatString(SCREEN_WIDTH / 2 - 80,  240, GetColor(255, 255, 255), L"マウス感度: %.2f", m_mouseSensitivity);
 
-	const int sliderXStart = 440;
-	const int sliderXEnd = 840;
-	const int sliderY = 350;
-	const int sliderWidth = sliderXEnd - sliderXStart;
+	{
+		int knobX = SLIDER_X_START + static_cast<int>(SLIDER_WIDTH * ((m_mouseSensitivity - SENS_MIN) / (SENS_MAX - SENS_MIN)));
+		DrawBox(SLIDER_X_START, SENS_SLIDER_Y - 4, SLIDER_X_END, SENS_SLIDER_Y + 4, GetColor(80, 70, 65), TRUE);
+		DrawBox(SLIDER_X_START, SENS_SLIDER_Y - 4, knobX,        SENS_SLIDER_Y + 4, GetColor(135, 206, 250), TRUE);
+		DrawCircle(knobX, SENS_SLIDER_Y, 12, GetColor(255, 220, 100), TRUE);
+		DrawCircle(knobX, SENS_SLIDER_Y, 12, GetColor(255, 255, 255), FALSE);
+		UiMouse::DrawButton(380, SENS_SLIDER_Y - 20, 420, SENS_SLIDER_Y + 20, L"-");
+		UiMouse::DrawButton(860, SENS_SLIDER_Y - 20, 900, SENS_SLIDER_Y + 20, L"+");
+	}
 
-	float minSens = 0.1f;
-	float maxSens = 3.0f;
-	int knobX = sliderXStart + static_cast<int>(sliderWidth * ((m_mouseSensitivity - minSens) / (maxSens - minSens)));
+	// ==============================
+	// カーソルサイズスライダー
+	// ==============================
+	SetFontSize(24);
+	DrawFormatString(SCREEN_WIDTH / 2 - 180, 355, GetColor(230, 230, 230), L"カーソルサイズ（当たり判定）を変更します。");
+	DrawFormatString(SCREEN_WIDTH / 2 - 80,  392, GetColor(255, 255, 255), L"カーソル半径: %.0f px", m_cursorRadius);
 
-	// Slider Track (inactive and active parts)
-	DrawBox(sliderXStart, sliderY - 4, sliderXEnd, sliderY + 4, GetColor(80, 70, 65), TRUE);
-	DrawBox(sliderXStart, sliderY - 4, knobX, sliderY + 4, GetColor(135, 206, 250), TRUE);
+	{
+		int knobX = SLIDER_X_START + static_cast<int>(SLIDER_WIDTH * ((m_cursorRadius - CUR_MIN) / (CUR_MAX - CUR_MIN)));
+		DrawBox(SLIDER_X_START, CUR_SLIDER_Y - 4, SLIDER_X_END, CUR_SLIDER_Y + 4, GetColor(80, 70, 65), TRUE);
+		DrawBox(SLIDER_X_START, CUR_SLIDER_Y - 4, knobX,        CUR_SLIDER_Y + 4, GetColor(150, 255, 180), TRUE);
+		DrawCircle(knobX, CUR_SLIDER_Y, 12, GetColor(120, 255, 160), TRUE);
+		DrawCircle(knobX, CUR_SLIDER_Y, 12, GetColor(255, 255, 255), FALSE);
+		UiMouse::DrawButton(380, CUR_SLIDER_Y - 20, 420, CUR_SLIDER_Y + 20, L"-");
+		UiMouse::DrawButton(860, CUR_SLIDER_Y - 20, 900, CUR_SLIDER_Y + 20, L"+");
+	}
 
-	// Slider Knob
-	DrawCircle(knobX, sliderY, 12, GetColor(255, 220, 100), TRUE);
-	DrawCircle(knobX, sliderY, 12, GetColor(255, 255, 255), FALSE);
+	// カーソルサイズのプレビュー（右端に小さく表示）
+	{
+		const int previewX = 1050;
+		const int previewY = CUR_SLIDER_Y;
+		SetFontSize(16);
+		DrawFormatString(previewX - 30, previewY - 50, GetColor(180, 180, 180), L"プレビュー");
+		// 当たり判定円
+		const int pr = static_cast<int>(m_cursorRadius);
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 55);
+		DrawCircle(previewX, previewY, pr, GetColor(100, 200, 255), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		DrawCircle(previewX, previewY, pr, GetColor(80, 180, 255), FALSE);
+		// 中心
+		DrawCircle(previewX, previewY, 5, GetColor(255, 255, 255), TRUE);
+		DrawCircle(previewX, previewY, 5, GetColor(0, 0, 0), FALSE);
+		// 十字線
+		DrawLine(previewX - 12, previewY, previewX - 6, previewY, GetColor(255, 255, 255));
+		DrawLine(previewX + 6,  previewY, previewX + 12, previewY, GetColor(255, 255, 255));
+		DrawLine(previewX, previewY - 12, previewX, previewY - 6, GetColor(255, 255, 255));
+		DrawLine(previewX, previewY + 6,  previewX, previewY + 12, GetColor(255, 255, 255));
+	}
 
-	// Fine-tune buttons (- and +)
-	UiMouse::DrawButton(380, sliderY - 20, 420, sliderY + 20, L"-");
-	UiMouse::DrawButton(860, sliderY - 20, 900, sliderY + 20, L"+");
+	// 保存して戻るボタン
+	UiMouse::DrawButton(440, 530, 840, 580, L"保存してタイトルに戻る");
 
-	// Return button
-	UiMouse::DrawButton(440, 500, 840, 550, L"\u4FDD\u5B58\u3057\u3066\u30BF\u30A4\u30C8\u30EB\u306B\u623B\u308B");
+	// カスタムカーソル（設定画面でも表示・当たり判定円は非表示）
+	UiMouse::DrawCursor(m_cursorRadius, false);
 }
 
 SceneID SettingScene::GetNextSceneID() const
@@ -147,4 +232,4 @@ SceneID SettingScene::GetNextSceneID() const
 		return SceneID::Title;
 	}
 	return SceneID::None;
-}
+}

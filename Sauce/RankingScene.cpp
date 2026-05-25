@@ -1,7 +1,8 @@
-#include "RankingScene.h"
+﻿#include "RankingScene.h"
 
 #include "GameConfig.h"
 #include "GameStrings.h"
+#include "GameSession.h"
 #include "RankingManager.h"
 #include "UiMouse.h"
 #include "DxLib.h"
@@ -120,6 +121,8 @@ void RankingScene::Draw()
 	
 	SetFontSize(20);
 	UiMouse::DrawButton(BTN_CLEAR_LEFT, BTN_CLEAR_TOP, BTN_CLEAR_RIGHT, BTN_CLEAR_BOTTOM, STR_BTN_CLEAR_DATA);
+	// カスタムカーソル
+	UiMouse::DrawCursor(GameSession::GetCursorRadius(), false);
 }
 
 SceneID RankingScene::GetNextSceneID() const

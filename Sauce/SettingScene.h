@@ -3,7 +3,7 @@
 
 // =============================================================================
 // SettingScene.h
-// マウス感度などの設定を行うシーン
+// マウス感度・カーソルサイズなどの設定を行うシーン
 // =============================================================================
 
 class SettingScene : public SceneBase
@@ -19,6 +19,10 @@ public:
 
 private:
 	float m_mouseSensitivity;
-	bool m_isDraggingSlider;
-	bool m_requestGoTitle;
+	bool  m_isDraggingSlider;
+
+	float m_cursorRadius;
+	bool  m_isDraggingCursorSlider;
+
+	bool  m_requestGoTitle;
 };

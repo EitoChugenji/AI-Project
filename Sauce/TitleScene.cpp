@@ -130,6 +130,8 @@ void TitleScene::Draw()
 		UiMouse::DrawButton(BTN_LEFT, BTN_RANK_TOP, BTN_RIGHT, BTN_RANK_BOTTOM, STR_BTN_RANKING);
 		UiMouse::DrawButton(BTN_LEFT, BTN_QUIT_TOP, BTN_RIGHT, BTN_QUIT_BOTTOM, STR_BTN_QUIT);
 	}
+	// カスタムカーソルを最前面に描画（UIシーンでは当たり判定円は非表示）
+	UiMouse::DrawCursor(GameSession::GetCursorRadius(), false);
 }
 
 SceneID TitleScene::GetNextSceneID() const

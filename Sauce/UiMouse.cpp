@@ -1,4 +1,4 @@
-#include "UiMouse.h"
+﻿#include "UiMouse.h"
 
 #include "DxLib.h"
 
@@ -71,4 +71,33 @@ void UiMouse::DrawButton(
 		top + (bottom - top - textHeight) / 2,
 		GetColor(255, 255, 255),
 		label);
+}
+
+void UiMouse::DrawCursor(float radius, bool showHitArea)
+{
+	int mx = 0, my = 0;
+	GetMousePoint(&mx, &my);
+
+	const int r = static_cast<int>(radius);
+
+	// 当たり判定エリア（薄い半透明の円）
+	if (showHitArea && r > 10)
+	{
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 55);
+		DrawCircle(mx, my, r, GetColor(100, 200, 255), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		// 当たり判定の外周
+		DrawCircle(mx, my, r, GetColor(80, 180, 255), FALSE);
+	}
+
+	// カーソル本体（中心の小さい白丸）
+	DrawCircle(mx, my, 5, GetColor(255, 255, 255), TRUE);
+	DrawCircle(mx, my, 5, GetColor(0, 0, 0), FALSE);
+
+	// 十字線
+	const int crossLen = 12;
+	DrawLine(mx - crossLen, my, mx - 6, my, GetColor(255, 255, 255));
+	DrawLine(mx + 6,        my, mx + crossLen, my, GetColor(255, 255, 255));
+	DrawLine(mx, my - crossLen, mx, my - 6, GetColor(255, 255, 255));
+	DrawLine(mx, my + 6,        mx, my + crossLen, GetColor(255, 255, 255));
 }

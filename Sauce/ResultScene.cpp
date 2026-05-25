@@ -1,4 +1,4 @@
-#include "ResultScene.h"
+﻿#include "ResultScene.h"
 
 #include "GameConfig.h"
 #include "GameStrings.h"
@@ -94,14 +94,12 @@ void ResultScene::Draw()
 		GetColor(255, 240, 200),
 		GetColor(255, 255, 255));
 
-	UiMouse::DrawButton(
-		BTN_LEFT,
-		BTN_SAVE_TOP,
-		BTN_RIGHT,
-		BTN_SAVE_BOTTOM,
+	UiMouse::DrawButton(BTN_LEFT, BTN_SAVE_TOP, BTN_RIGHT, BTN_SAVE_BOTTOM,
 		STR_BTN_SAVE_RANKING,
 		m_nameInput.HasText());
 	UiMouse::DrawButton(BTN_LEFT, BTN_TITLE_TOP, BTN_RIGHT, BTN_TITLE_BOTTOM, STR_BTN_TO_TITLE);
+	// カスタムカーソル
+	UiMouse::DrawCursor(GameSession::GetCursorRadius(), false);
 }
 
 SceneID ResultScene::GetNextSceneID() const

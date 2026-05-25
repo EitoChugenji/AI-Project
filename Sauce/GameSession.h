@@ -24,11 +24,16 @@ public:
 
 	static float GetMouseSensitivity();
 	static void SetMouseSensitivity(float value);
+
+	static float GetCursorRadius();
+	static void SetCursorRadius(float value);
+
 	static void LoadConfig();
 	static void SaveConfig();
 
 private:
 	static float s_mouseSensitivity;
+	static float s_cursorRadius;
 	static int s_lastScore;
 	static int s_lastMaxCombo;
 	static bool s_isGameOver;

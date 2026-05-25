@@ -2,6 +2,7 @@
 #include <cstdio>
 
 float GameSession::s_mouseSensitivity = 1.0f;
+float GameSession::s_cursorRadius = 8.0f;
 int GameSession::s_lastScore = 0;
 int GameSession::s_lastMaxCombo = 0;
 bool GameSession::s_isGameOver = false;
@@ -75,16 +76,28 @@ void GameSession::SetMouseSensitivity(float value)
 	if (s_mouseSensitivity > 3.0f) s_mouseSensitivity = 3.0f;
 }
 
+float GameSession::GetCursorRadius()
+{
+	return s_cursorRadius;
+}
+
+void GameSession::SetCursorRadius(float value)
+{
+	s_cursorRadius = value;
+	if (s_cursorRadius < 4.0f)  s_cursorRadius = 4.0f;
+	if (s_cursorRadius > 60.0f) s_cursorRadius = 60.0f;
+}
+
 void GameSession::LoadConfig()
 {
 	FILE* fp = nullptr;
 	if (fopen_s(&fp, "config.dat", "r") == 0 && fp != nullptr)
 	{
-		float val = 1.0f;
-		if (fscanf_s(fp, "%f", &val) == 1)
-		{
-			SetMouseSensitivity(val);
-		}
+		float sens = 1.0f;
+		float crad = 8.0f;
+		fscanf_s(fp, "%f %f", &sens, &crad);
+		SetMouseSensitivity(sens);
+		SetCursorRadius(crad);
 		fclose(fp);
 	}
 }
@@ -94,7 +107,7 @@ void GameSession::SaveConfig()
 	FILE* fp = nullptr;
 	if (fopen_s(&fp, "config.dat", "w") == 0 && fp != nullptr)
 	{
-		fprintf_s(fp, "%.2f", s_mouseSensitivity);
+		fprintf_s(fp, "%.2f %.2f", s_mouseSensitivity, s_cursorRadius);
 		fclose(fp);
 	}
 }

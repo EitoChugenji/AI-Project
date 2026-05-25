@@ -1,4 +1,4 @@
-#include "DxLib.h"
+﻿#include "DxLib.h"
 
 #include "GameConfig.h"
 #include "GameStrings.h"
@@ -21,6 +21,9 @@ int WINAPI WinMain(
 	}
 
 	SetWaitVSyncFlag(TRUE);
+
+	// OSのカーソルを非表示にしてカスタムカーソルで代替する
+	SetMouseDispFlag(FALSE);
 
 	SceneManager sceneManager;
 	sceneManager.SetFirstScene(SceneID::Title);

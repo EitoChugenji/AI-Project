@@ -4,6 +4,7 @@
 #include "GameConfig.h"
 #include "GameStrings.h"
 #include "GameSession.h"
+#include "UiMouse.h"
 #include "DxLib.h"
 
 #include <cmath>
@@ -306,11 +307,14 @@ void MainScene::UpdateInput()
 
 bool MainScene::IsClickOnEntity(const GameEntity& entity, float mx, float my) const
 {
+	const float cursorR = GameSession::GetCursorRadius();
+
 	if (entity.usesRectCollider)
-		return CheckHitCircleRect({ mx, my, 6.0f }, MakeRectColliderFromCenter(entity.x, entity.y, entity.halfWidth, entity.halfHeight));
+		return CheckHitCircleRect({ mx, my, cursorR }, MakeRectColliderFromCenter(entity.x, entity.y, entity.halfWidth, entity.halfHeight));
 
 	float dx = mx - entity.x, dy = my - entity.y;
-	return (dx * dx + dy * dy) <= (entity.radius + 6.0f) * (entity.radius + 6.0f);
+	const float combinedR = entity.radius + cursorR;
+	return (dx * dx + dy * dy) <= combinedR * combinedR;
 }
 
 void MainScene::Draw()
@@ -320,6 +324,8 @@ void MainScene::Draw()
 	DrawEntities();
 	DrawPopups();
 	DrawUI();
+	// カスタムカーソルを最前面に描画
+	UiMouse::DrawCursor(GameSession::GetCursorRadius(), true);
 }
 
 void MainScene::DrawBackground()
