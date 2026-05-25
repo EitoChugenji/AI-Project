@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // =============================================================================
 // GameConfig.h … ゲーム全体の設定値
@@ -50,3 +50,4 @@ static const int RANKING_NAME_MAX_LEN = 10;
 static const int RANKING_MAX_ENTRIES = 10;
 static const wchar_t RANKING_FILE_NAME_NORMAL[] = L"ranking_normal.dat";
 static const wchar_t RANKING_FILE_NAME_EASY[] = L"ranking_easy.dat";
+static const wchar_t RANKING_FILE_NAME_HELL[] = L"ranking_easy.dat";

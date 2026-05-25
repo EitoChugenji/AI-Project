@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // ゲームタイトル … 『ちいさな森のポルターゲイスト』
 #define STR_WINDOW_TITLE \

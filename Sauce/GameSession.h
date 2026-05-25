@@ -3,7 +3,8 @@
 enum class GameDifficulty
 {
 	Normal,
-	Easy
+	Easy,
+	Hell
 };
 
 class GameSession
