@@ -50,15 +50,26 @@ void UiMouse::DrawButton(
 	int right,
 	int bottom,
 	const wchar_t* label,
-	bool enabled)
+	bool enabled,
+	bool highlighted)
 {
 	const bool hovered = enabled && IsOver(left, top, right, bottom);
-	const int bodyColor = enabled
-		? (hovered ? GetColor(90, 110, 160) : GetColor(60, 75, 120))
-		: GetColor(45, 45, 55);
-	const int borderColor = enabled
-		? GetColor(200, 210, 255)
-		: GetColor(90, 90, 100);
+	int bodyColor;
+	int borderColor;
+	if (highlighted)
+	{
+		bodyColor = hovered ? GetColor(110, 95, 45) : GetColor(160, 130, 60);
+		borderColor = GetColor(255, 235, 170);
+	}
+	else
+	{
+		bodyColor = enabled
+			? (hovered ? GetColor(90, 110, 160) : GetColor(60, 75, 120))
+			: GetColor(45, 45, 55);
+		borderColor = enabled
+			? GetColor(200, 210, 255)
+			: GetColor(90, 90, 100);
+	}
 
 	DrawBox(left, top, right, bottom, bodyColor, TRUE);
 	DrawBox(left, top, right, bottom, borderColor, FALSE);
@@ -66,10 +77,11 @@ void UiMouse::DrawButton(
 	SetFontSize(22);
 	const int textWidth = GetDrawStringWidth(label, -1);
 	const int textHeight = GetFontSize();
+	const int textColor = highlighted ? GetColor(255, 255, 220) : GetColor(255, 255, 255);
 	DrawFormatString(
 		left + (right - left - textWidth) / 2,
 		top + (bottom - top - textHeight) / 2,
-		GetColor(255, 255, 255),
+		textColor,
 		label);
 }
 

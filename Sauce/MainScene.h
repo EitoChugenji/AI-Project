@@ -59,6 +59,19 @@ struct Star
 	int brightness;
 };
 
+struct ClickParticle
+{
+	bool active;
+	float x;
+	float y;
+	float vx;
+	float vy;
+	int color;
+	int life;
+	int maxLife;
+	float size;
+};
+
 class MainScene : public SceneBase
 {
 public:
@@ -99,6 +112,10 @@ private:
 
 	float RandomRange(float minValue, float maxValue);
 
+	void SpawnClickEffect(float x, float y, int color);
+	void UpdateParticles();
+	void DrawParticles();
+
 	bool m_requestGoResult;
 	int m_score;
 	int m_combo;
@@ -118,4 +135,7 @@ private:
 	GameEntity m_entities[MAX_FALLING_ENTITIES];
 	PopupText m_popups[MAX_POPUP_TEXTS];
 	Star m_stars[MAX_STARS];
+
+	static const int MAX_CLICK_PARTICLES = 128;
+	ClickParticle m_particles[MAX_CLICK_PARTICLES];
 };

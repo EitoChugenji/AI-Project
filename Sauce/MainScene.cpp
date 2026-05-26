@@ -48,6 +48,7 @@ void MainScene::ResetGame()
 
 	for (int i = 0; i < MAX_FALLING_ENTITIES; ++i) m_entities[i].active = false;
 	for (int i = 0; i < MAX_POPUP_TEXTS; ++i) m_popups[i].active = false;
+	for (int i = 0; i < MAX_CLICK_PARTICLES; ++i) m_particles[i].active = false;
 
 	for (int i = 0; i < MAX_STARS; ++i)
 	{
@@ -176,6 +177,7 @@ void MainScene::Update()
 	UpdateSpawning();
 	UpdateEntities();
 	UpdatePopups();
+	UpdateParticles();
 	UpdateInput();
 	UpdateIdleTimer();
 	UpdateFever();
@@ -270,6 +272,9 @@ void MainScene::UpdateInput()
 	m_idleTimerFrames = 0;
 	int mx, my; GetMousePoint(&mx, &my);
 
+	// タップの基本エフェクト（青みがかったさわやかな光粒子）
+	SpawnClickEffect(static_cast<float>(mx), static_cast<float>(my), ::GetColor(160, 210, 255));
+
 	const float difficultyBonus = 1.0f + (GetDifficultyProgress() * 1.5f);
 
 	for (int i = 0; i < MAX_FALLING_ENTITIES; ++i)
@@ -286,6 +291,8 @@ void MainScene::UpdateInput()
 			m_timeLeftSec = (m_timeLeftSec < OBSTACLE_PENALTY_TIME_SEC) ? 0 : (m_timeLeftSec - OBSTACLE_PENALTY_TIME_SEC);
 			m_combo = 0; m_comboTimer = 0;
 			SpawnPopup(entity.x, entity.y, CrimeType::Trap);
+			// 障害物クリックペナルティ時：赤色の飛び散る火花粒子
+			SpawnClickEffect(entity.x, entity.y, ::GetColor(255, 60, 80));
 		}
 		else
 		{
@@ -301,6 +308,8 @@ void MainScene::UpdateInput()
 
 			m_score += static_cast<int>(base * difficultyBonus * comboMult * feverMult);
 			SpawnPopup(entity.x, entity.y, entity.crime);
+			// 成功時：オブジェクトの色に合わせた華やかな飛び散りエフェクト
+			SpawnClickEffect(entity.x, entity.y, entity.bodyColor);
 		}
 	}
 }
@@ -323,6 +332,7 @@ void MainScene::Draw()
 	DrawPlayArea();
 	DrawEntities();
 	DrawPopups();
+	DrawParticles();
 	DrawUI();
 	// カスタムカーソルを最前面に描画
 	UiMouse::DrawCursor(GameSession::GetCursorRadius(), true);
@@ -369,11 +379,79 @@ void MainScene::DrawUI()
 	DrawFormatString(220, 20, ::GetColor(255, 230, 180), STR_MAIN_SCORE, m_score);
 
 	GameDifficulty diff = GameSession::GetDifficulty();
-	const wchar_t* diffStr = (diff == GameDifficulty::Easy) ? STR_DIFF_EASY : (diff == GameDifficulty::Hell) ? L"鬼" : STR_DIFF_NORMAL;
+	const wchar_t* diffStr = (diff == GameDifficulty::Easy) ? STR_DIFF_EASY : (diff == GameDifficulty::Hell) ? STR_DIFF_HELL : STR_DIFF_NORMAL;
 	DrawFormatString(1000, 20, ::GetColor(200, 255, 200), L"%s", diffStr);
 
 	if (m_combo >= 2) DrawFormatString(24, 86, ::GetColor(255, 180, 120), STR_MAIN_COMBO, m_combo);
 	if (m_feverTimer > 0) DrawFormatString(SCREEN_WIDTH / 2 - 140, 24, ::GetColor(255, 120, 200), STR_MAIN_FEVER);
+}
+
+void MainScene::SpawnClickEffect(float x, float y, int color)
+{
+	const int count = 12;
+	for (int k = 0; k < count; ++k)
+	{
+		int slot = -1;
+		for (int i = 0; i < MAX_CLICK_PARTICLES; ++i)
+		{
+			if (!m_particles[i].active)
+			{
+				slot = i;
+				break;
+			}
+		}
+		if (slot < 0) break;
+
+		float angle = RandomRange(0.0f, 360.0f) * 3.14159265f / 180.0f;
+		float speed = RandomRange(2.0f, 6.0f);
+		int maxLife = 20 + GetRand(15);
+
+		m_particles[slot].active = true;
+		m_particles[slot].x = x;
+		m_particles[slot].y = y;
+		m_particles[slot].vx = std::cos(angle) * speed;
+		m_particles[slot].vy = std::sin(angle) * speed;
+		m_particles[slot].color = color;
+		m_particles[slot].life = maxLife;
+		m_particles[slot].maxLife = maxLife;
+		m_particles[slot].size = RandomRange(4.0f, 9.0f);
+	}
+}
+
+void MainScene::UpdateParticles()
+{
+	for (int i = 0; i < MAX_CLICK_PARTICLES; ++i)
+	{
+		ClickParticle& p = m_particles[i];
+		if (!p.active) continue;
+
+		p.x += p.vx;
+		p.y += p.vy;
+		p.vx *= 0.92f;
+		p.vy *= 0.92f;
+
+		if (--p.life <= 0)
+		{
+			p.active = false;
+		}
+	}
+}
+
+void MainScene::DrawParticles()
+{
+	for (int i = 0; i < MAX_CLICK_PARTICLES; ++i)
+	{
+		const ClickParticle& p = m_particles[i];
+		if (!p.active) continue;
+
+		float alphaPercent = (float)p.life / p.maxLife;
+		int alpha = (int)(alphaPercent * 255);
+		float currentSize = p.size * alphaPercent;
+
+		SetDrawBlendMode(DX_BLENDMODE_ADD, alpha);
+		DrawCircle((int)p.x, (int)p.y, (int)(currentSize + 0.5f), p.color, TRUE);
+	}
+	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
 }
 
 SceneID MainScene::GetNextSceneID() const { return m_requestGoResult ? SceneID::Result : SceneID::None; }

@@ -111,16 +111,18 @@ void TitleScene::Draw()
 	DrawCircle(900, 310, 38, ::GetColor(255, 235, 160), TRUE);
 
 	SetFontSize(52);
-	DrawFormatString(SCREEN_WIDTH / 2 - 420, 120, ::GetColor(255, 245, 210), STR_TITLE_MAIN);
+	const int titleWidth = GetDrawStringWidth(STR_TITLE_MAIN, -1);
+	DrawFormatString(SCREEN_WIDTH / 2 - titleWidth / 2, 120, ::GetColor(255, 245, 210), STR_TITLE_MAIN);
 
 	SetFontSize(26);
-	DrawFormatString(SCREEN_WIDTH / 2 - 300, 200, ::GetColor(200, 210, 255), STR_TITLE_SUB);
+	const int subWidth = GetDrawStringWidth(STR_TITLE_SUB, -1);
+	DrawFormatString(SCREEN_WIDTH / 2 - subWidth / 2, 200, ::GetColor(200, 210, 255), STR_TITLE_SUB);
 
 	if (m_mode == TitleMode::SelectingDifficulty)
 	{
 		UiMouse::DrawButton(BTN_LEFT, BTN_PLAY_EASY_TOP, BTN_RIGHT, BTN_PLAY_EASY_BOTTOM, STR_BTN_PLAY_EASY);
 		UiMouse::DrawButton(BTN_LEFT, BTN_PLAY_NORMAL_TOP, BTN_RIGHT, BTN_PLAY_NORMAL_BOTTOM, STR_BTN_PLAY_NORMAL);
-		UiMouse::DrawButton(BTN_LEFT, BTN_PLAY_HELL_TOP, BTN_RIGHT, BTN_PLAY_HELL_BOTTOM, L"鬼");
+		UiMouse::DrawButton(BTN_LEFT, BTN_PLAY_HELL_TOP, BTN_RIGHT, BTN_PLAY_HELL_BOTTOM, STR_BTN_PLAY_HELL);
 		UiMouse::DrawButton(BTN_LEFT, BTN_CANCEL_TOP, BTN_RIGHT, BTN_CANCEL_BOTTOM, STR_BTN_CANCEL);
 	}
 	else

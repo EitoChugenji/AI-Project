@@ -12,7 +12,8 @@ public:
 		int right,
 		int bottom,
 		const wchar_t* label,
-		bool enabled = true);
+		bool enabled = true,
+		bool highlighted = false);
 
 	// カスタムカーソル描画（ゲーム中に OSカーソルの代わりに描く）
 	// radius: 表示する円の半径（ピクセル）

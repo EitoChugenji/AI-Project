@@ -17,10 +17,12 @@ namespace
 	static const int BTN_CLEAR_RIGHT = 1220;
 	static const int BTN_CLEAR_TOP = 40;
 	static const int BTN_CLEAR_BOTTOM = 90;
-	static const int BTN_TAB_NORMAL_LEFT = 420;
-	static const int BTN_TAB_NORMAL_RIGHT = 620;
-	static const int BTN_TAB_EASY_LEFT = 640;
-	static const int BTN_TAB_EASY_RIGHT = 840;
+	static const int BTN_TAB_EASY_LEFT = 320;
+	static const int BTN_TAB_EASY_RIGHT = 520;
+	static const int BTN_TAB_NORMAL_LEFT = 540;
+	static const int BTN_TAB_NORMAL_RIGHT = 740;
+	static const int BTN_TAB_HELL_LEFT = 760;
+	static const int BTN_TAB_HELL_RIGHT = 960;
 	static const int BTN_TAB_TOP = 100;
 	static const int BTN_TAB_BOTTOM = 140;
 }
@@ -45,13 +47,17 @@ void RankingScene::Update()
 		RankingManager::ClearAll();
 	}
 	
+	if (UiMouse::TryClick(BTN_TAB_EASY_LEFT, BTN_TAB_TOP, BTN_TAB_EASY_RIGHT, BTN_TAB_BOTTOM))
+	{
+		RankingManager::SetViewDifficulty(GameDifficulty::Easy);
+	}
 	if (UiMouse::TryClick(BTN_TAB_NORMAL_LEFT, BTN_TAB_TOP, BTN_TAB_NORMAL_RIGHT, BTN_TAB_BOTTOM))
 	{
 		RankingManager::SetViewDifficulty(GameDifficulty::Normal);
 	}
-	if (UiMouse::TryClick(BTN_TAB_EASY_LEFT, BTN_TAB_TOP, BTN_TAB_EASY_RIGHT, BTN_TAB_BOTTOM))
+	if (UiMouse::TryClick(BTN_TAB_HELL_LEFT, BTN_TAB_TOP, BTN_TAB_HELL_RIGHT, BTN_TAB_BOTTOM))
 	{
-		RankingManager::SetViewDifficulty(GameDifficulty::Easy);
+		RankingManager::SetViewDifficulty(GameDifficulty::Hell);
 	}
 }
 
@@ -64,12 +70,20 @@ void RankingScene::Draw()
 	}
 
 	SetFontSize(44);
-	const wchar_t* diffStr = RankingManager::GetViewDifficulty() == GameDifficulty::Easy ? STR_DIFF_EASY : STR_DIFF_NORMAL;
-	DrawFormatString(SCREEN_WIDTH / 2 - 220, 30, GetColor(255, 235, 190), L"%s %s", STR_RANKING_TITLE, diffStr);
+	const GameDifficulty viewDiff = RankingManager::GetViewDifficulty();
+	const wchar_t* diffStr = STR_DIFF_NORMAL;
+	if (viewDiff == GameDifficulty::Easy) diffStr = STR_DIFF_EASY;
+	else if (viewDiff == GameDifficulty::Hell) diffStr = STR_DIFF_HELL;
+
+	wchar_t fullTitle[64];
+	swprintf_s(fullTitle, L"%s %s", STR_RANKING_TITLE, diffStr);
+	const int titleWidth = GetDrawStringWidth(fullTitle, -1);
+	DrawFormatString(SCREEN_WIDTH / 2 - titleWidth / 2, 30, GetColor(255, 235, 190), L"%s", fullTitle);
 
 	SetFontSize(20);
-	UiMouse::DrawButton(BTN_TAB_NORMAL_LEFT, BTN_TAB_TOP, BTN_TAB_NORMAL_RIGHT, BTN_TAB_BOTTOM, STR_DIFF_NORMAL);
-	UiMouse::DrawButton(BTN_TAB_EASY_LEFT, BTN_TAB_TOP, BTN_TAB_EASY_RIGHT, BTN_TAB_BOTTOM, STR_DIFF_EASY);
+	UiMouse::DrawButton(BTN_TAB_EASY_LEFT, BTN_TAB_TOP, BTN_TAB_EASY_RIGHT, BTN_TAB_BOTTOM, STR_DIFF_EASY, true, viewDiff == GameDifficulty::Easy);
+	UiMouse::DrawButton(BTN_TAB_NORMAL_LEFT, BTN_TAB_TOP, BTN_TAB_NORMAL_RIGHT, BTN_TAB_BOTTOM, STR_DIFF_NORMAL, true, viewDiff == GameDifficulty::Normal);
+	UiMouse::DrawButton(BTN_TAB_HELL_LEFT, BTN_TAB_TOP, BTN_TAB_HELL_RIGHT, BTN_TAB_BOTTOM, STR_DIFF_HELL, true, viewDiff == GameDifficulty::Hell);
 
 	SetFontSize(22);
 	DrawFormatString(280, 160, GetColor(180, 190, 220), STR_RANKING_COL_RANK);

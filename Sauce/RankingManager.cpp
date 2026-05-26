@@ -14,7 +14,9 @@ GameDifficulty RankingManager::s_viewDifficulty = GameDifficulty::Normal;
 
 const wchar_t* RankingManager::GetFileName(GameDifficulty diff)
 {
-	return diff == GameDifficulty::Easy ? RANKING_FILE_NAME_EASY : RANKING_FILE_NAME_NORMAL;
+	if (diff == GameDifficulty::Easy) return RANKING_FILE_NAME_EASY;
+	if (diff == GameDifficulty::Hell) return RANKING_FILE_NAME_HELL;
+	return RANKING_FILE_NAME_NORMAL;
 }
 
 void RankingManager::Load()
