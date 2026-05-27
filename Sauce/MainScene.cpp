@@ -135,8 +135,6 @@ bool MainScene::TrySpawnEntity()
 		entity.halfHeight = 26.0f + static_cast<float>(GetRand(12));
 		entity.x = RandomRange(static_cast<float>(ROOM_LEFT) + entity.halfWidth, static_cast<float>(ROOM_RIGHT) - entity.halfWidth);
 		entity.y = static_cast<float>(ROOM_TOP) - entity.halfHeight - 8.0f;
-		entity.bodyColor = ::GetColor(200, 55, 75);
-		entity.accentColor = ::GetColor(130, 25, 40);
 	}
 	else if (GetRand(100) < 35)
 	{
@@ -146,8 +144,6 @@ bool MainScene::TrySpawnEntity()
 		entity.radius = 18.0f + static_cast<float>(GetRand(10));
 		entity.x = RandomRange(static_cast<float>(ROOM_LEFT) + entity.radius, static_cast<float>(ROOM_RIGHT) - entity.radius);
 		entity.y = static_cast<float>(ROOM_TOP) - entity.radius - 8.0f;
-		entity.bodyColor = ::GetColor(255, 220, 120);
-		entity.accentColor = ::GetColor(200, 150, 60);
 	}
 	else
 	{
@@ -157,8 +153,31 @@ bool MainScene::TrySpawnEntity()
 		entity.radius = 30.0f + static_cast<float>(GetRand(12));
 		entity.x = RandomRange(static_cast<float>(ROOM_LEFT) + entity.radius, static_cast<float>(ROOM_RIGHT) - entity.radius);
 		entity.y = static_cast<float>(ROOM_TOP) - entity.radius - 8.0f;
-		entity.bodyColor = ::GetColor(240, 210 + GetRand(40), 180 + GetRand(50));
-		entity.accentColor = ::GetColor(80, 60, 50);
+	}
+
+	// 犯罪の種類に応じた固有の配色を設定（エフェクトや描画で使用）
+	switch (entity.crime)
+	{
+	case CrimeType::Hack:
+		entity.bodyColor = ::GetColor(0, 245, 255);
+		entity.accentColor = ::GetColor(0, 120, 200);
+		break;
+	case CrimeType::Bomb:
+		entity.bodyColor = ::GetColor(255, 190, 0);
+		entity.accentColor = ::GetColor(255, 90, 0);
+		break;
+	case CrimeType::Ritual:
+		entity.bodyColor = ::GetColor(255, 0, 150);
+		entity.accentColor = ::GetColor(170, 50, 255);
+		break;
+	case CrimeType::Snack:
+		entity.bodyColor = ::GetColor(255, 130, 170);
+		entity.accentColor = ::GetColor(255, 215, 80);
+		break;
+	case CrimeType::Trap:
+		entity.bodyColor = ::GetColor(220, 30, 30);
+		entity.accentColor = ::GetColor(255, 215, 0);
+		break;
 	}
 	return true;
 }
@@ -195,6 +214,8 @@ void MainScene::EndGame(bool isGameOver)
 
 void MainScene::UpdateTimer()
 {
+	// デバッグ: 時間停止
+	if (GameSession::GetDebugModeEnabled() && GameSession::GetDebugInfiniteTime()) return;
 	if (++m_secondCounter >= TARGET_FPS) { m_secondCounter = 0; --m_timeLeftSec; }
 }
 
@@ -208,6 +229,8 @@ void MainScene::OnEntityFallOffScreen(GameEntity& entity)
 {
 	if (entity.kind == EntityKind::Obstacle) return;
 	m_score = (m_score < (entity.kind == EntityKind::Animal ? MISS_ANIMAL_PENALTY_SCORE : MISS_ITEM_PENALTY_SCORE)) ? 0 : (m_score - (entity.kind == EntityKind::Animal ? MISS_ANIMAL_PENALTY_SCORE : MISS_ITEM_PENALTY_SCORE));
+	// デバッグ: コンボ維持（画面外に出てもコンボが切れない）
+	if (GameSession::GetDebugModeEnabled() && GameSession::GetDebugNoComboBreak()) return;
 	m_combo = 0; m_comboTimer = 0;
 }
 
@@ -267,6 +290,55 @@ void MainScene::UpdateInput()
 	// キャスト警告が出ないよう、比較対象も unsigned int として扱います
 	const bool clicked = (mouseInput & MOUSE_INPUT_LEFT) && !((unsigned int)m_prevMouseInput & MOUSE_INPUT_LEFT);
 	m_prevMouseInput = (int)mouseInput;
+
+	// ==============================
+	// デバッグ: 中央付近オートクリック
+	// ==============================
+	if (GameSession::GetDebugModeEnabled() && GameSession::GetDebugAutoClick())
+	{
+		const float difficultyBonus = 1.0f + (GetDifficultyProgress() * 1.5f);
+		// Auto-click debug: simulate a click on all entities (including obstacles) with full scoring logic
+		for (int i = 0; i < MAX_FALLING_ENTITIES; ++i)
+		{
+			GameEntity& entity = m_entities[i];
+			if (!entity.active) continue;
+
+			// Apply same handling as manual click
+			entity.active = false;
+			m_idleTimerFrames = 0;
+			m_hitFlashTimer = 4;
+
+			if (entity.kind == EntityKind::Obstacle)
+			{
+				// Obstacle penalty (same as manual click)
+				if (GameSession::GetDebugModeEnabled() && GameSession::GetDebugNoTrapPenalty())
+				{
+					SpawnClickEffect(entity.x, entity.y, ::GetColor(100, 255, 100));
+					continue;
+				}
+				m_score = (m_score < OBSTACLE_PENALTY_SCORE) ? 0 : (m_score - OBSTACLE_PENALTY_SCORE);
+				m_timeLeftSec = (m_timeLeftSec < OBSTACLE_PENALTY_TIME_SEC) ? 0 : (m_timeLeftSec - OBSTACLE_PENALTY_TIME_SEC);
+				m_combo = 0; m_comboTimer = 0;
+				SpawnPopup(entity.x, entity.y, CrimeType::Trap);
+				SpawnClickEffect(entity.x, entity.y, ::GetColor(255, 60, 80));
+			}
+			else
+			{
+				int base = (entity.kind == EntityKind::Animal) ? 120 : 35;
+				++m_combo;
+				m_comboTimer = TARGET_FPS * 2;
+				m_maxCombo = (m_combo > m_maxCombo) ? m_combo : m_maxCombo;
+				base += (m_combo * (entity.kind == EntityKind::Animal ? 15 : 5));
+				int clampedCombo = (m_combo > 50) ? 50 : m_combo;
+				float comboMult = 1.0f + (static_cast<float>(clampedCombo) * 0.2f);
+				int feverMult = (m_feverTimer > 0) ? 2 : 1;
+				m_score += static_cast<int>(base * difficultyBonus * comboMult * feverMult);
+				SpawnPopup(entity.x, entity.y, entity.crime);
+				SpawnClickEffect(entity.x, entity.y, entity.bodyColor);
+			}
+		}
+	}
+
 	if (!clicked) return;
 
 	m_idleTimerFrames = 0;
@@ -287,6 +359,12 @@ void MainScene::UpdateInput()
 
 		if (entity.kind == EntityKind::Obstacle)
 		{
+			// デバッグ: 罠無効
+			if (GameSession::GetDebugModeEnabled() && GameSession::GetDebugNoTrapPenalty())
+			{
+				SpawnClickEffect(entity.x, entity.y, ::GetColor(100, 255, 100));
+				continue;
+			}
 			m_score = (m_score < OBSTACLE_PENALTY_SCORE) ? 0 : (m_score - OBSTACLE_PENALTY_SCORE);
 			m_timeLeftSec = (m_timeLeftSec < OBSTACLE_PENALTY_TIME_SEC) ? 0 : (m_timeLeftSec - OBSTACLE_PENALTY_TIME_SEC);
 			m_combo = 0; m_comboTimer = 0;
@@ -340,28 +418,441 @@ void MainScene::Draw()
 
 void MainScene::DrawBackground()
 {
-	for (int y = 0; y < SCREEN_HEIGHT; ++y) DrawLine(0, y, SCREEN_WIDTH, y, ::GetColor(10, 15, 20 + (y * 60 / SCREEN_HEIGHT)));
-	for (int i = 0; i < MAX_STARS; ++i) DrawCircle(m_stars[i].x, m_stars[i].y, 1 + (i % 2), ::GetColor(m_stars[i].brightness, m_stars[i].brightness, m_stars[i].brightness), TRUE);
+	// 1. ベースの宇宙グラデーション背景
+	for (int y = 0; y < SCREEN_HEIGHT; ++y) {
+		DrawLine(0, y, SCREEN_WIDTH, y, ::GetColor(8, 12, 18 + (y * 50 / SCREEN_HEIGHT)));
+	}
+	// 2. 星々
+	for (int i = 0; i < MAX_STARS; ++i) {
+		DrawCircle(m_stars[i].x, m_stars[i].y, 1 + (i % 2), ::GetColor(m_stars[i].brightness, m_stars[i].brightness, m_stars[i].brightness), TRUE);
+	}
+
+	// 3. 画面の四隅のSFチックなHUDブラケット
+	unsigned int hudColor = ::GetColor(0, 160, 255);
+	int bracketLen = 20;
+	// 左上
+	DrawLine(5, 5, 5 + bracketLen, 5, hudColor);
+	DrawLine(5, 5, 5, 5 + bracketLen, hudColor);
+	// 右上
+	DrawLine(SCREEN_WIDTH - 5, 5, SCREEN_WIDTH - 5 - bracketLen, 5, hudColor);
+	DrawLine(SCREEN_WIDTH - 5, 5, SCREEN_WIDTH - 5, 5 + bracketLen, hudColor);
+	// 左下
+	DrawLine(5, SCREEN_HEIGHT - 5, 5 + bracketLen, SCREEN_HEIGHT - 5, hudColor);
+	DrawLine(5, SCREEN_HEIGHT - 5, 5, SCREEN_HEIGHT - 5 - bracketLen, hudColor);
+	// 右下
+	DrawLine(SCREEN_WIDTH - 5, SCREEN_HEIGHT - 5, SCREEN_WIDTH - 5 - bracketLen, SCREEN_HEIGHT - 5, hudColor);
+	DrawLine(SCREEN_WIDTH - 5, SCREEN_HEIGHT - 5, SCREEN_WIDTH - 5, SCREEN_HEIGHT - 5 - bracketLen, hudColor);
+
+	// 4. 左側パネル（サイバーセキュリティ・モニター）
+	{
+		// パネル半透明背景
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 50);
+		DrawBox(10, ROOM_TOP, ROOM_LEFT - 20, ROOM_BOTTOM, ::GetColor(15, 25, 40), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		
+		// パネル外枠
+		DrawBox(10, ROOM_TOP, ROOM_LEFT - 20, ROOM_BOTTOM, ::GetColor(0, 100, 180), FALSE);
+		DrawBox(12, ROOM_TOP + 2, ROOM_LEFT - 22, ROOM_BOTTOM - 2, ::GetColor(0, 60, 120), FALSE);
+
+		// アナライザー表示
+		int startY = ROOM_TOP + 30;
+		SetFontSize(14);
+		DrawString(20, startY - 20, L"SYSTEM ANALYZER", ::GetColor(0, 220, 255));
+		
+		// 5本のアニメーションウェーブバー
+		for (int j = 0; j < 5; ++j)
+		{
+			float speed = 0.002f + j * 0.0008f;
+			float val = std::sin((float)GetNowCount() * speed) * 0.5f + 0.5f;
+			int barW = (int)(val * 115.0f);
+			unsigned int barCol = ::GetColor(0, 160 + (j * 18), 255);
+			// バックバー
+			DrawBox(20, startY + (j * 16), 170, startY + (j * 16) + 6, ::GetColor(20, 35, 50), TRUE);
+			// アクティブバー
+			DrawBox(20, startY + (j * 16), 20 + barW, startY + (j * 16) + 6, barCol, TRUE);
+		}
+
+		// ステータス情報テキスト
+		int textY = startY + 105;
+		DrawString(20, textY, L"SECURE SHIELD", ::GetColor(140, 170, 210));
+		DrawString(20, textY + 16, L"STATUS: ACTIVE", ::GetColor(0, 255, 130));
+		DrawFormatString(20, textY + 32, ::GetColor(140, 170, 210), L"THREATS: %2d", CountActiveEntities());
+
+		// 脅威レベルの動的変化
+		unsigned int threatCol = ::GetColor(0, 255, 100);
+		const wchar_t* threatText = L"LEVEL: SAFE";
+		if (m_feverTimer > 0)
+		{
+			threatCol = ::GetColor(255, 0, 130);
+			threatText = L"LEVEL: OVERLOAD";
+		}
+		else if (CountActiveEntities() > 10)
+		{
+			threatCol = ::GetColor(255, 120, 0);
+			threatText = L"LEVEL: WARNING";
+		}
+		DrawString(20, textY + 48, threatText, threatCol);
+
+		// 回転するサイバーレーダー
+		int radarX = 95;
+		int radarY = ROOM_BOTTOM - 75;
+		int radarR = 48;
+		float rAngle = (float)GetNowCount() * 0.0012f;
+		
+		DrawCircle(radarX, radarY, radarR, ::GetColor(0, 90, 140), FALSE);
+		DrawCircle(radarX, radarY, radarR - 15, ::GetColor(0, 70, 110), FALSE);
+		DrawCircle(radarX, radarY, radarR - 30, ::GetColor(0, 50, 80), FALSE);
+		
+		int sweepX = radarX + (int)(std::cos(rAngle) * radarR);
+		int sweepY = radarY + (int)(std::sin(rAngle) * radarR);
+		DrawLine(radarX, radarY, sweepX, sweepY, ::GetColor(0, 255, 255));
+		
+		// ターゲット検知点ハイライト（点滅）
+		if (CountActiveEntities() > 0) {
+			int targetAngle = (GetNowCount() / 300) % 4;
+			int targetX = radarX + (int)(std::cos(targetAngle * 1.57f) * (radarR - 10));
+			int targetY = radarY + (int)(std::sin(targetAngle * 1.57f) * (radarR - 10));
+			DrawCircle(targetX, targetY, 3, ::GetColor(255, 80, 80), TRUE);
+		}
+	}
+
+	// 5. 右側パネル（神秘のオカルトエンジン）
+	{
+		// パネル半透明背景
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 50);
+		DrawBox(ROOM_RIGHT + 20, ROOM_TOP, SCREEN_WIDTH - 10, ROOM_BOTTOM, ::GetColor(25, 15, 40), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		
+		// パネル外枠
+		DrawBox(ROOM_RIGHT + 20, ROOM_TOP, SCREEN_WIDTH - 10, ROOM_BOTTOM, ::GetColor(150, 40, 230), FALSE);
+		DrawBox(ROOM_RIGHT + 22, ROOM_TOP + 2, SCREEN_WIDTH - 12, ROOM_BOTTOM - 2, ::GetColor(100, 20, 170), FALSE);
+
+		// 回転魔法陣ディスプレイ
+		int magicX = ROOM_RIGHT + 95;
+		int magicY = ROOM_TOP + 80;
+		int magicR = 52;
+		float mAngle = (float)GetNowCount() * -0.0008f;
+		
+		DrawCircle(magicX, magicY, magicR, ::GetColor(120, 0, 180), FALSE);
+		DrawCircle(magicX, magicY, magicR - 8, ::GetColor(90, 0, 140), FALSE);
+		DrawCircle(magicX, magicY, magicR - 30, ::GetColor(240, 0, 150), FALSE);
+		
+		// 内側の回転する三角形
+		int mxP[3], myP[3];
+		for (int k = 0; k < 3; ++k)
+		{
+			float a = mAngle + k * (2.0f * 3.14159265f / 3.0f);
+			mxP[k] = magicX + (int)(std::cos(a) * (magicR - 4));
+			myP[k] = magicY + (int)(std::sin(a) * (magicR - 4));
+		}
+		DrawLine(mxP[0], myP[0], mxP[1], myP[1], ::GetColor(180, 40, 255));
+		DrawLine(mxP[1], myP[1], mxP[2], myP[2], ::GetColor(180, 40, 255));
+		DrawLine(mxP[2], myP[2], mxP[0], myP[0], ::GetColor(180, 40, 255));
+
+		// 属性エネルギーゲージ
+		int gaugeY = magicY + 95;
+		SetFontSize(14);
+		DrawString(ROOM_RIGHT + 30, gaugeY - 20, L"AURA ENERGY", ::GetColor(230, 190, 255));
+		
+		const wchar_t* elemNames[] = { L"FIR", L"ICE", L"LTG" };
+		unsigned int elemCols[] = { ::GetColor(255, 80, 40), ::GetColor(40, 190, 255), ::GetColor(255, 220, 40) };
+		for (int j = 0; j < 3; ++j)
+		{
+			float phase = j * 1.5f;
+			float level = std::sin((float)GetNowCount() * 0.0015f + phase) * 0.35f + 0.65f;
+			int barH = (int)(level * 90.0f);
+			
+			// ラベル
+			DrawString(ROOM_RIGHT + 32 + (j * 44), gaugeY, elemNames[j], elemCols[j]);
+			// 背景スロット
+			DrawBox(ROOM_RIGHT + 36 + (j * 44), gaugeY + 16, ROOM_RIGHT + 36 + (j * 44) + 10, gaugeY + 110, ::GetColor(35, 25, 45), TRUE);
+			// 動的エネルギーゲージ
+			DrawBox(ROOM_RIGHT + 36 + (j * 44), gaugeY + 110 - barH, ROOM_RIGHT + 36 + (j * 44) + 10, gaugeY + 110, elemCols[j], TRUE);
+		}
+
+		// 魔術ステータス
+		int rightTextY = gaugeY + 125;
+		DrawString(ROOM_RIGHT + 30, rightTextY, L"MAGIC SYNERGY", ::GetColor(160, 140, 180));
+		DrawString(ROOM_RIGHT + 30, rightTextY + 16, L"INTEGRITY: 98%", ::GetColor(180, 40, 255));
+		DrawString(ROOM_RIGHT + 30, rightTextY + 32, L"STATUS: STABLE", ::GetColor(0, 255, 130));
+	}
 }
 
 void MainScene::DrawPlayArea()
 {
-	DrawBox(ROOM_LEFT - 12, ROOM_TOP - 12, ROOM_RIGHT + 12, ROOM_BOTTOM + 12, ::GetColor(70, 45, 30), TRUE);
-	DrawBox(ROOM_LEFT, ROOM_TOP, ROOM_RIGHT, ROOM_BOTTOM, ::GetColor(55, 38, 28), TRUE);
-	DrawBox(ROOM_LEFT + 8, ROOM_TOP + 8, ROOM_RIGHT - 8, ROOM_BOTTOM - 8, ::GetColor(95, 70, 55), TRUE);
+	// 金属風の重厚なベース外枠
+	DrawBox(ROOM_LEFT - 14, ROOM_TOP - 14, ROOM_RIGHT + 14, ROOM_BOTTOM + 14, ::GetColor(30, 35, 45), TRUE);
+	
+	// ネオンで輝くバリア境界線（フィーバー中や警告中にダイナミックに変化）
+	unsigned int borderColor = ::GetColor(0, 160, 255); // デフォルト：水色
+	if (m_feverTimer > 0)
+	{
+		borderColor = ::GetColor(255, 50, 180); // フィーバー中：ピンク
+	}
+	else if (m_timeLeftSec <= 10)
+	{
+		borderColor = (GetNowCount() % 500 < 250) ? ::GetColor(255, 30, 30) : ::GetColor(100, 10, 10); // タイムアップ警告：赤点滅
+	}
+	
+	// ネオンの多重グロー表現
+	for (int i = 0; i < 4; ++i)
+	{
+		int alpha = 255 - (i * 50);
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, alpha);
+		DrawBox(ROOM_LEFT - 10 + i, ROOM_TOP - 10 + i, ROOM_RIGHT + 10 - i, ROOM_BOTTOM + 10 - i, borderColor, FALSE);
+	}
+	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+
+	// プレイ領域背景（黒いオブジェクトとのコントラストを高めるため、視認性の高いダークスレートネイビーに変更）
+	DrawBox(ROOM_LEFT - 6, ROOM_TOP - 6, ROOM_RIGHT + 6, ROOM_BOTTOM + 6, ::GetColor(30, 42, 58), TRUE);
+	
+	// デジタルグリッド（方眼状のライン）を背景に薄く描画
+	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 40);
+	unsigned int gridColor = ::GetColor(80, 110, 140);
+	for (int x = ROOM_LEFT + 40; x < ROOM_RIGHT; x += 60)
+	{
+		DrawLine(x, ROOM_TOP, x, ROOM_BOTTOM, gridColor);
+	}
+	for (int y = ROOM_TOP + 40; y < ROOM_BOTTOM; y += 60)
+	{
+		DrawLine(ROOM_LEFT, y, ROOM_RIGHT, y, gridColor);
+	}
+	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
 }
 
 void MainScene::DrawEntities()
 {
+	unsigned int colorCyan1   = ::GetColor(0, 245, 255);
+	unsigned int colorCyan2   = ::GetColor(0, 120, 200);
+	unsigned int colorCyan3   = ::GetColor(220, 255, 255);
+
+	unsigned int colorOrange1 = ::GetColor(255, 90, 0);
+	unsigned int colorOrange2 = ::GetColor(255, 190, 0);
+	unsigned int colorOrange3 = ::GetColor(255, 255, 100);
+
+	unsigned int colorPurple1 = ::GetColor(170, 50, 255);
+	unsigned int colorPurple2 = ::GetColor(255, 0, 150);
+	unsigned int colorPurple3 = ::GetColor(240, 220, 255);
+
+	unsigned int colorPink1   = ::GetColor(255, 130, 170);
+	unsigned int colorPink2   = ::GetColor(255, 215, 80);
+	unsigned int colorPink3   = ::GetColor(255, 255, 240);
+
+	unsigned int colorTrapRed    = ::GetColor(220, 30, 30);
+	unsigned int colorTrapDarkRed= ::GetColor(120, 10, 10);
+	unsigned int colorTrapYellow = ::GetColor(255, 215, 0);
+	unsigned int colorBlack      = ::GetColor(15, 15, 15);
+	unsigned int colorWhite      = ::GetColor(255, 255, 255);
+
 	for (int i = 0; i < MAX_FALLING_ENTITIES; ++i)
 	{
 		const GameEntity& e = m_entities[i];
 		if (!e.active) continue;
+
+		// 1. ドロップシャドウを描画（半透明の黒い影を少し右下にずらして描く）
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 80);
 		if (e.usesRectCollider) {
-			DrawBox((int)(e.x - e.halfWidth), (int)(e.y - e.halfHeight), (int)(e.x + e.halfWidth), (int)(e.y + e.halfHeight), e.bodyColor, TRUE);
+			DrawBox((int)(e.x - e.halfWidth + 6), (int)(e.y - e.halfHeight + 6), (int)(e.x + e.halfWidth + 6), (int)(e.y + e.halfHeight + 6), ::GetColor(0, 0, 0), TRUE);
+		} else {
+			DrawCircle((int)(e.x + 5), (int)(e.y + 5), (int)e.radius, ::GetColor(0, 0, 0), TRUE);
 		}
-		else {
-			DrawCircle((int)e.x, (int)e.y, (int)e.radius, e.bodyColor, TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+
+		// 2. 各犯罪タイプ（CrimeType）に応じたおしゃれなベクターグラフィックスを描画
+		switch (e.crime)
+		{
+		case CrimeType::Hack: // サイバーターゲット・シールド風
+			{
+				float angle = (float)GetNowCount() * 0.002f;
+				// 同心円のアウトライン
+				DrawCircle((int)e.x, (int)e.y, (int)e.radius, colorCyan2, FALSE);
+				DrawCircle((int)e.x, (int)e.y, (int)(e.radius * 0.75f), colorCyan1, FALSE);
+				DrawCircle((int)e.x, (int)e.y, (int)(e.radius * 0.35f), colorCyan1, TRUE);
+				DrawCircle((int)e.x, (int)e.y, (int)(e.radius * 0.15f), colorCyan3, TRUE);
+
+				// 回転する4つの照準マーク
+				float tickR = e.radius * 1.0f;
+				for (int k = 0; k < 4; ++k)
+				{
+					float tAngle = angle + k * (3.14159265f / 2.0f);
+					int px = (int)(e.x + std::cos(tAngle) * tickR);
+					int py = (int)(e.y + std::sin(tAngle) * tickR);
+					DrawLine(px - 5, py, px + 5, py, colorCyan1);
+					DrawLine(px, py - 5, px, py + 5, colorCyan1);
+				}
+
+				// 十字の目盛りライン
+				DrawLine((int)(e.x - e.radius * 1.1f), (int)e.y, (int)(e.x - e.radius * 0.5f), (int)e.y, colorCyan1);
+				DrawLine((int)(e.x + e.radius * 0.5f), (int)e.y, (int)(e.x + e.radius * 1.1f), (int)e.y, colorCyan1);
+				DrawLine((int)e.x, (int)(e.y - e.radius * 1.1f), (int)e.x, (int)(e.y - e.radius * 0.5f), colorCyan1);
+				DrawLine((int)e.x, (int)(e.y + e.radius * 0.5f), (int)e.x, (int)(e.y + e.radius * 1.1f), colorCyan1);
+			}
+			break;
+
+		case CrimeType::Bomb: // 警告ギア・爆弾コア風
+			{
+				float angle = (float)GetNowCount() * 0.0025f;
+				// 外周の細い警告円
+				DrawCircle((int)e.x, (int)e.y, (int)e.radius, colorOrange1, FALSE);
+
+				// 回転する8つのギザギザ歯車牙
+				int numTeeth = 8;
+				for (int k = 0; k < numTeeth; ++k)
+				{
+					float tAngle = angle + k * (2.0f * 3.14159265f / numTeeth);
+					int x1 = (int)(e.x + std::cos(tAngle - 0.15f) * (e.radius * 0.7f));
+					int y1 = (int)(e.y + std::sin(tAngle - 0.15f) * (e.radius * 0.7f));
+					int x2 = (int)(e.x + std::cos(tAngle + 0.15f) * (e.radius * 0.7f));
+					int y2 = (int)(e.y + std::sin(tAngle + 0.15f) * (e.radius * 0.7f));
+					int x3 = (int)(e.x + std::cos(tAngle) * (e.radius * 1.05f));
+					int y3 = (int)(e.y + std::sin(tAngle) * (e.radius * 1.05f));
+					DrawTriangle(x1, y1, x2, y2, x3, y3, colorOrange2, TRUE);
+				}
+
+				// コア本体
+				DrawCircle((int)e.x, (int)e.y, (int)(e.radius * 0.75f), colorOrange1, TRUE);
+				DrawCircle((int)e.x, (int)e.y, (int)(e.radius * 0.45f), colorOrange2, TRUE);
+				DrawCircle((int)e.x, (int)e.y, (int)(e.radius * 0.2f), colorOrange3, TRUE);
+			}
+			break;
+
+		case CrimeType::Ritual: // 魔法陣・禁忌のオカルトマーク風
+			{
+				float angle = (float)GetNowCount() * -0.0015f; // 逆回転で妖しさを表現
+				// 多重の魔法円
+				DrawCircle((int)e.x, (int)e.y, (int)e.radius, colorPurple1, FALSE);
+				DrawCircle((int)e.x, (int)e.y, (int)(e.radius * 0.94f), colorPurple1, FALSE);
+				DrawCircle((int)e.x, (int)e.y, (int)(e.radius * 0.65f), colorPurple2, FALSE);
+
+				// 回転する星型（五芒星）を描画
+				int px[5], py[5];
+				for (int k = 0; k < 5; ++k)
+				{
+					float tAngle = angle + k * (4.0f * 3.14159265f / 5.0f);
+					px[k] = (int)(e.x + std::cos(tAngle) * (e.radius * 0.88f));
+					py[k] = (int)(e.y + std::sin(tAngle) * (e.radius * 0.88f));
+				}
+				for (int k = 0; k < 5; ++k)
+				{
+					DrawLine(px[k], py[k], px[(k + 1) % 5], py[(k + 1) % 5], colorPurple2);
+				}
+
+				// 内部の逆回転する三角形
+				int numTri = 3;
+				for (int k = 0; k < numTri; ++k)
+				{
+					float tAngle = -angle + k * (2.0f * 3.14159265f / numTri);
+					int x1 = (int)(e.x + std::cos(tAngle) * (e.radius * 0.55f));
+					int y1 = (int)(e.y + std::sin(tAngle) * (e.radius * 0.55f));
+					int x2 = (int)(e.x + std::cos(tAngle + 2.0f * 3.14159265f / 3.0f) * (e.radius * 0.55f));
+					int y2 = (int)(e.y + std::sin(tAngle + 2.0f * 3.14159265f / 3.0f) * (e.radius * 0.55f));
+					DrawLine(x1, y1, x2, y2, colorPurple1);
+				}
+
+				// 中心部
+				DrawCircle((int)e.x, (int)e.y, (int)(e.radius * 0.25f), colorPurple3, TRUE);
+			}
+			break;
+
+		case CrimeType::Snack: // ポップで美味しそうなキャンディ風
+			{
+				float angle = (float)GetNowCount() * 0.002f;
+				float cosA = std::cos(angle);
+				float sinA = std::sin(angle);
+
+				// 包み紙のひねり部分（回転させた左右の三角形）
+				auto drawRotatedTriangle = [&](float lx1, float ly1, float lx2, float ly2, float lx3, float ly3, unsigned int col) {
+					int x1 = (int)(e.x + lx1 * cosA - ly1 * sinA);
+					int y1 = (int)(e.y + lx1 * sinA + ly1 * cosA);
+					int x2 = (int)(e.x + lx2 * cosA - ly2 * sinA);
+					int y2 = (int)(e.y + lx2 * sinA + ly2 * cosA);
+					int x3 = (int)(e.x + lx3 * cosA - ly3 * sinA);
+					int y3 = (int)(e.y + lx3 * sinA + ly3 * cosA);
+					DrawTriangle(x1, y1, x2, y2, x3, y3, col, TRUE);
+				};
+
+				// 左のひねり
+				drawRotatedTriangle(-e.radius * 0.4f, 0.0f, -e.radius * 0.95f, -e.radius * 0.45f, -e.radius * 0.95f, e.radius * 0.45f, colorPink2);
+				drawRotatedTriangle(-e.radius * 0.4f, 0.0f, -e.radius * 0.85f, -e.radius * 0.25f, -e.radius * 0.85f, e.radius * 0.25f, colorPink3);
+
+				// 右のひねり
+				drawRotatedTriangle(e.radius * 0.4f, 0.0f, e.radius * 0.95f, -e.radius * 0.45f, e.radius * 0.95f, e.radius * 0.45f, colorPink2);
+				drawRotatedTriangle(e.radius * 0.4f, 0.0f, e.radius * 0.85f, -e.radius * 0.25f, e.radius * 0.85f, e.radius * 0.25f, colorPink3);
+
+				// キャンディの球体本体
+				DrawCircle((int)e.x, (int)e.y, (int)(e.radius * 0.62f), colorPink1, TRUE);
+
+				// キャンディのうずまき模様
+				int numSwirls = 4;
+				for (int k = 0; k < numSwirls; ++k)
+				{
+					float swirlAngle = angle + k * (2.0f * 3.14159265f / numSwirls);
+					int xStart = (int)e.x;
+					int yStart = (int)e.y;
+					int xEnd = (int)(e.x + std::cos(swirlAngle) * (e.radius * 0.55f));
+					int yEnd = (int)(e.y + std::sin(swirlAngle) * (e.radius * 0.55f));
+					DrawLine(xStart, yStart, xEnd, yEnd, colorPink3);
+				}
+
+				// ハイライト
+				DrawCircle((int)(e.x - e.radius * 0.2f), (int)(e.y - e.radius * 0.2f), (int)(e.radius * 0.15f), colorPink3, TRUE);
+			}
+			break;
+
+		case CrimeType::Trap: // 警告用のトゲトゲ・危険トラップ風（矩形）
+			{
+				int xMin = (int)(e.x - e.halfWidth);
+				int xMax = (int)(e.x + e.halfWidth);
+				int yMin = (int)(e.y - e.halfHeight);
+				int yMax = (int)(e.y + e.halfHeight);
+
+				// 上下のトゲトゲを描画
+				int spikeSize = 8;
+				for (int px = xMin + 10; px <= xMax - 10; px += 16)
+				{
+					DrawTriangle(px - 6, yMin, px + 6, yMin, px, yMin - spikeSize, colorTrapDarkRed, TRUE);
+					DrawTriangle(px - 4, yMin, px + 4, yMin, px, yMin - spikeSize + 2, colorTrapRed, TRUE);
+				}
+				for (int px = xMin + 10; px <= xMax - 10; px += 16)
+				{
+					DrawTriangle(px - 6, yMax, px + 6, yMax, px, yMax + spikeSize, colorTrapDarkRed, TRUE);
+					DrawTriangle(px - 4, yMax, px + 4, yMax, px, yMax + spikeSize - 2, colorTrapRed, TRUE);
+				}
+
+				// 1. 黄色の背景塗りつぶし
+				DrawBox(xMin + 6, yMin + 6, xMax - 6, yMax - 6, colorTrapYellow, TRUE);
+
+				// 2. 黒い斜めゼブラ線を背景の上に描画（はみ出して描画して後から枠で隠す）
+				for (int offset = -80; offset <= 80; offset += 16)
+				{
+					for (int w = -3; w <= 3; ++w)
+					{
+						DrawLine(xMin + offset + w, yMin + 6, xMin + offset + (yMax - yMin - 12) + w, yMax - 6, colorBlack);
+					}
+				}
+
+				// 3. 枠をゼブラ線の上から重ねて描く（マスク処理の代わり）
+				// 外周の黒枠
+				DrawBox(xMin, yMin, xMin + 6, yMax, colorBlack, TRUE); // 左枠
+				DrawBox(xMax - 6, yMin, xMax, yMax, colorBlack, TRUE); // 右枠
+				DrawBox(xMin, yMin, xMax, yMin + 6, colorBlack, TRUE); // 上枠
+				DrawBox(xMin, yMax - 6, xMax, yMax, colorBlack, TRUE); // 下枠
+
+				// 内側の赤枠
+				DrawBox(xMin + 3, yMin + 3, xMin + 6, yMax - 3, colorTrapRed, TRUE); // 左内赤
+				DrawBox(xMax - 6, yMin + 3, xMax - 3, yMax - 3, colorTrapRed, TRUE); // 右内赤
+				DrawBox(xMin + 3, yMin + 3, xMax - 3, yMin + 6, colorTrapRed, TRUE); // 上内赤
+				DrawBox(xMin + 3, yMax - 6, xMax - 3, yMax - 3, colorTrapRed, TRUE); // 下内赤
+
+				// 4. 中央の「！」マークを描画
+				int innerHeight = (int)(e.halfHeight * 0.9f);
+				DrawBox((int)e.x - 3, (int)e.y - innerHeight + 6, (int)e.x + 3, (int)e.y + 2, colorBlack, TRUE);
+				DrawCircle((int)e.x, (int)(e.y + innerHeight - 8), 4, colorBlack, TRUE);
+
+				// マーク内ハイライト
+				DrawBox((int)e.x - 1, (int)e.y - innerHeight + 8, (int)e.x + 1, (int)e.y - 2, colorWhite, TRUE);
+			}
+			break;
 		}
 	}
 }
@@ -374,16 +865,100 @@ void MainScene::DrawPopups()
 
 void MainScene::DrawUI()
 {
-	SetFontSize(24);
-	DrawFormatString(20, 20, ::GetColor(220, 230, 255), STR_MAIN_TIMER, m_timeLeftSec);
-	DrawFormatString(220, 20, ::GetColor(255, 230, 180), STR_MAIN_SCORE, m_score);
+	// 1. タイマー枠（左上：水色ガラスパネル）
+	{
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 90);
+		DrawRoundRect(10, 10, 200, 60, 8, 8, ::GetColor(10, 20, 35), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		
+		DrawRoundRect(10, 10, 200, 60, 8, 8, ::GetColor(0, 160, 255), FALSE);
+		SetFontSize(20);
+		// タイムアップ間近で点滅
+		unsigned int timerCol = (m_timeLeftSec <= 10 && GetNowCount() % 500 < 250) ? ::GetColor(255, 50, 50) : ::GetColor(220, 240, 255);
+		DrawFormatString(28, 24, timerCol, STR_MAIN_TIMER, m_timeLeftSec);
+	}
 
-	GameDifficulty diff = GameSession::GetDifficulty();
-	const wchar_t* diffStr = (diff == GameDifficulty::Easy) ? STR_DIFF_EASY : (diff == GameDifficulty::Hell) ? STR_DIFF_HELL : STR_DIFF_NORMAL;
-	DrawFormatString(1000, 20, ::GetColor(200, 255, 200), L"%s", diffStr);
+	// 2. カオスポイント・スコア枠（中央左：ゴールドガラスパネル）
+	{
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 90);
+		DrawRoundRect(220, 10, 560, 60, 8, 8, ::GetColor(15, 20, 30), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		
+		DrawRoundRect(220, 10, 560, 60, 8, 8, ::GetColor(255, 190, 40), FALSE);
+		SetFontSize(20);
+		DrawFormatString(240, 24, ::GetColor(255, 225, 160), STR_MAIN_SCORE, m_score);
+	}
 
-	if (m_combo >= 2) DrawFormatString(24, 86, ::GetColor(255, 180, 120), STR_MAIN_COMBO, m_combo);
-	if (m_feverTimer > 0) DrawFormatString(SCREEN_WIDTH / 2 - 140, 24, ::GetColor(255, 120, 200), STR_MAIN_FEVER);
+	// 3. 難易度枠（右上：エメラルドガラスパネル）
+	{
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 90);
+		DrawRoundRect(1070, 10, 1270, 60, 8, 8, ::GetColor(10, 25, 20), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		
+		DrawRoundRect(1070, 10, 1270, 60, 8, 8, ::GetColor(40, 220, 110), FALSE);
+		SetFontSize(20);
+		GameDifficulty diff = GameSession::GetDifficulty();
+		const wchar_t* diffStr = (diff == GameDifficulty::Easy) ? STR_DIFF_EASY : (diff == GameDifficulty::Hell) ? STR_DIFF_HELL : STR_DIFF_NORMAL;
+		DrawFormatString(1105, 24, ::GetColor(180, 255, 190), L"%s", diffStr);
+	}
+
+	// 4. コンボ枠（左側タイマーの下：オレンジガラスパネル）
+	if (m_combo >= 2)
+	{
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 110);
+		DrawRoundRect(10, 80, 200, 130, 8, 8, ::GetColor(25, 15, 10), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		
+		DrawRoundRect(10, 80, 200, 130, 8, 8, ::GetColor(255, 110, 30), FALSE);
+		SetFontSize(24);
+		DrawFormatString(26, 92, ::GetColor(255, 165, 80), STR_MAIN_COMBO, m_combo);
+		
+		// 進捗バー（コンボ維持時間）
+		int barW = (int)((float)m_comboTimer / (TARGET_FPS * 2) * 160.0f);
+		DrawBox(20, 114, 180, 120, ::GetColor(40, 25, 15), TRUE);
+		DrawBox(20, 114, 20 + barW, 120, ::GetColor(255, 130, 40), TRUE);
+	}
+
+	// 5. フィーバータイム警告表示（中央：ピンクのネオンフラッシュパネル）
+	if (m_feverTimer > 0)
+	{
+		int flashAlpha = (int)(150 + std::sin((float)GetNowCount() * 0.012f) * 105);
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, flashAlpha);
+		DrawRoundRect(580, 10, 1050, 60, 8, 8, ::GetColor(255, 30, 120), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		
+		DrawRoundRect(580, 10, 1050, 60, 8, 8, ::GetColor(255, 220, 240), FALSE);
+		SetFontSize(22);
+		DrawFormatString(735, 23, ::GetColor(255, 255, 255), STR_MAIN_FEVER);
+	}
+
+	// 6. 下部インフォメーションコントロールパネル（ゲーム説明とSFテキスト ticker）
+	{
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 90);
+		DrawRoundRect(220, 634, 1060, 710, 8, 8, ::GetColor(12, 18, 28), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		
+		DrawRoundRect(220, 634, 1060, 710, 8, 8, ::GetColor(0, 120, 180), FALSE);
+		
+		SetFontSize(16);
+		// ヒントテキスト
+		DrawString(240, 646, STR_MAIN_HINT, ::GetColor(150, 210, 255));
+		
+		// システムログ風のダミーテキスト（時間で少し動くように見せる）
+		unsigned int logColor = ::GetColor(90, 140, 180);
+		int dotCount = (GetNowCount() / 400) % 4;
+		wchar_t dots[5] = L"";
+		for (int d = 0; d < dotCount; ++d) dots[d] = L'.';
+		dots[dotCount] = L'\0';
+		
+		if (m_feverTimer > 0) {
+			DrawFormatString(240, 676, ::GetColor(255, 60, 150), L"FEVER INTRUSION DETECTED // MULTIPLIER x2 ACTIVE // POWER BOOST ON%s", dots);
+		} else if (m_timeLeftSec <= 10) {
+			DrawFormatString(240, 676, ::GetColor(255, 80, 80), L"CRITICAL WARNING // TEMPORAL ANOMALY DETECTED // HASTEN EFFORTS%s", dots);
+		} else {
+			DrawFormatString(240, 676, logColor, L"SECURE MONITORING LAB L2 // SCANNING ATMOSPHERIC RESONANCE%s", dots);
+		}
+	}
 }
 
 void MainScene::SpawnClickEffect(float x, float y, int color)

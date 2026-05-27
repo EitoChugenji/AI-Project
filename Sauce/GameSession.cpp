@@ -1,4 +1,4 @@
-#include "GameSession.h"
+﻿#include "GameSession.h"
 #include <cstdio>
 
 float GameSession::s_mouseSensitivity = 1.0f;
@@ -8,6 +8,12 @@ int GameSession::s_lastMaxCombo = 0;
 bool GameSession::s_isGameOver = false;
 bool GameSession::s_quitRequested = false;
 GameDifficulty GameSession::s_difficulty = GameDifficulty::Normal;
+
+bool GameSession::s_debugModeEnabled = false;
+bool GameSession::s_debugAutoClick = false;
+bool GameSession::s_debugNoComboBreak = false;
+bool GameSession::s_debugNoTrapPenalty = false;
+bool GameSession::s_debugInfiniteTime = false;
 
 void GameSession::Reset()
 {
@@ -111,3 +117,18 @@ void GameSession::SaveConfig()
 		fclose(fp);
 	}
 }
+
+bool GameSession::GetDebugModeEnabled() { return s_debugModeEnabled; }
+void GameSession::SetDebugModeEnabled(bool value) { s_debugModeEnabled = value; }
+
+bool GameSession::GetDebugAutoClick() { return s_debugAutoClick; }
+void GameSession::SetDebugAutoClick(bool value) { s_debugAutoClick = value; }
+
+bool GameSession::GetDebugNoComboBreak() { return s_debugNoComboBreak; }
+void GameSession::SetDebugNoComboBreak(bool value) { s_debugNoComboBreak = value; }
+
+bool GameSession::GetDebugNoTrapPenalty() { return s_debugNoTrapPenalty; }
+void GameSession::SetDebugNoTrapPenalty(bool value) { s_debugNoTrapPenalty = value; }
+
+bool GameSession::GetDebugInfiniteTime() { return s_debugInfiniteTime; }
+void GameSession::SetDebugInfiniteTime(bool value) { s_debugInfiniteTime = value; }

@@ -135,8 +135,38 @@ void SettingScene::Update()
 		GameSession::SetCursorRadius(m_cursorRadius);
 	}
 
-	// 保存して戻るボタン
-	if (UiMouse::TryClick(440, 530, 840, 580))
+	// デバッグモード切り替え
+	if (UiMouse::TryClick(390, 480, 500, 510))
+	{
+		GameSession::SetDebugModeEnabled(!GameSession::GetDebugModeEnabled());
+	}
+
+	if (GameSession::GetDebugModeEnabled())
+	{
+		// 中央オートクリック
+		if (UiMouse::TryClick(520, 480, 730, 510))
+		{
+			GameSession::SetDebugAutoClick(!GameSession::GetDebugAutoClick());
+		}
+		// コンボ維持
+		if (UiMouse::TryClick(750, 480, 960, 510))
+		{
+			GameSession::SetDebugNoComboBreak(!GameSession::GetDebugNoComboBreak());
+		}
+		// 時間停止
+		if (UiMouse::TryClick(390, 525, 600, 555))
+		{
+			GameSession::SetDebugInfiniteTime(!GameSession::GetDebugInfiniteTime());
+		}
+		// 罠無効
+		if (UiMouse::TryClick(620, 525, 830, 555))
+		{
+			GameSession::SetDebugNoTrapPenalty(!GameSession::GetDebugNoTrapPenalty());
+		}
+	}
+
+	// 保存して戻るボタン（デバッグ表示のため y=590-640 へ移動）
+	if (UiMouse::TryClick(440, 590, 840, 640))
 	{
 		GameSession::SaveConfig();
 		m_requestGoTitle = true;
@@ -218,8 +248,42 @@ void SettingScene::Draw()
 		DrawLine(previewX, previewY + 6,  previewX, previewY + 12, GetColor(255, 255, 255));
 	}
 
+	// ==============================
+	// デバッグモードパネル
+	// ==============================
+	{
+		// パネル背景（半透明赤）
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 100);
+		DrawRoundRect(220, 470, 1060, 575, 8, 8, GetColor(35, 15, 15), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		DrawRoundRect(220, 470, 1060, 575, 8, 8, GetColor(255, 80, 80), FALSE);
+
+		SetFontSize(20);
+		DrawFormatString(240, 485, GetColor(255, 200, 200), L"デバッグ機能:");
+
+		// メインスイッチ
+		UiMouse::DrawButton(390, 480, 500, 510, GameSession::GetDebugModeEnabled() ? L"有効" : L"無効");
+
+		if (GameSession::GetDebugModeEnabled())
+		{
+			// 中央オートクリック
+			UiMouse::DrawButton(520, 480, 730, 510, GameSession::GetDebugAutoClick() ? L"オート:ON" : L"オート:OFF");
+			// コンボ維持
+			UiMouse::DrawButton(750, 480, 960, 510, GameSession::GetDebugNoComboBreak() ? L"コンボ維持:ON" : L"コンボ維持:OFF");
+			// 時間停止
+			UiMouse::DrawButton(390, 525, 600, 555, GameSession::GetDebugInfiniteTime() ? L"時間停止:ON" : L"時間停止:OFF");
+			// 罠無効
+			UiMouse::DrawButton(620, 525, 830, 555, GameSession::GetDebugNoTrapPenalty() ? L"罠無効:ON" : L"罠無効:OFF");
+		}
+		else
+		{
+			SetFontSize(18);
+			DrawFormatString(520, 486, GetColor(150, 120, 120), L"※デバッグを「有効」にすると機能切り替えが可能になります。");
+		}
+	}
+
 	// 保存して戻るボタン
-	UiMouse::DrawButton(440, 530, 840, 580, L"保存してタイトルに戻る");
+	UiMouse::DrawButton(440, 590, 840, 640, L"保存してタイトルに戻る");
 
 	// カスタムカーソル（設定画面でも表示・当たり判定円は非表示）
 	UiMouse::DrawCursor(m_cursorRadius, false);

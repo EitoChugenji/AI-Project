@@ -39,6 +39,10 @@ struct GameEntity
 
 	int bodyColor;
 	int accentColor;
+
+	bool isBoomerang;
+	bool hasReversed;
+	int  spawnSide;  // 0=上, 1=下, 2=左, 3=右
 };
 
 struct PopupText
@@ -71,6 +75,8 @@ struct ClickParticle
 	int maxLife;
 	float size;
 };
+
+enum class PauseState { None, Menu, Settings };
 
 class MainScene : public SceneBase
 {
@@ -116,6 +122,12 @@ private:
 	void UpdateParticles();
 	void DrawParticles();
 
+	// ポーズ・ゲーム中設定
+	void UpdatePauseMenu();
+	void DrawPauseOverlay();
+	void UpdateInGameSettings();
+	void DrawInGameSettings();
+
 	bool m_requestGoResult;
 	int m_score;
 	int m_combo;
@@ -131,6 +143,16 @@ private:
 	int m_hitFlashTimer;
 
 	int m_prevMouseInput;
+	bool m_prevEscKey;
+
+	PauseState m_pauseState;
+	bool m_requestGoTitle;
+
+	// ゲーム中設定スライダー状態
+	bool m_igSensDragging;
+	bool m_igCurDragging;
+	float m_igSensValue;
+	float m_igCurValue;
 
 	GameEntity m_entities[MAX_FALLING_ENTITIES];
 	PopupText m_popups[MAX_POPUP_TEXTS];

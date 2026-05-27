@@ -1,4 +1,4 @@
-﻿#include "TitleScene.h"
+#include "TitleScene.h"
 
 #include "GameConfig.h"
 #include "GameStrings.h"
@@ -95,28 +95,28 @@ void TitleScene::Draw()
 	for (int y = 0; y < SCREEN_HEIGHT; ++y)
 	{
 		const int blue = 25 + (y * 50 / SCREEN_HEIGHT);
-		DrawLine(0, y, SCREEN_WIDTH, y, ::GetColor(8, 12, blue));
+		DrawLine(0, y, SCREEN_WIDTH, y, GetColor(8, 12, blue));
 	}
 
 	for (int i = 0; i < 60; ++i)
 	{
 		const int x = (i * 173) % SCREEN_WIDTH;
 		const int y = (i * 97) % (SCREEN_HEIGHT / 2);
-		DrawCircle(x, y, 1 + (i % 2), ::GetColor(220, 220, 255), TRUE);
+		DrawCircle(x, y, 1 + (i % 2), GetColor(220, 220, 255), TRUE);
 	}
 
-	DrawBox(200, 380, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 40, ::GetColor(40, 28, 22), TRUE);
-	DrawCircle(350, 300, 40, ::GetColor(255, 230, 150), TRUE);
-	DrawCircle(640, 280, 35, ::GetColor(255, 220, 130), TRUE);
-	DrawCircle(900, 310, 38, ::GetColor(255, 235, 160), TRUE);
+	DrawBox(200, 380, SCREEN_WIDTH - 200, SCREEN_HEIGHT - 40, GetColor(40, 28, 22), TRUE);
+	DrawCircle(350, 300, 40, GetColor(255, 230, 150), TRUE);
+	DrawCircle(640, 280, 35, GetColor(255, 220, 130), TRUE);
+	DrawCircle(900, 310, 38, GetColor(255, 235, 160), TRUE);
 
 	SetFontSize(52);
 	const int titleWidth = GetDrawStringWidth(STR_TITLE_MAIN, -1);
-	DrawFormatString(SCREEN_WIDTH / 2 - titleWidth / 2, 120, ::GetColor(255, 245, 210), STR_TITLE_MAIN);
+	DrawFormatString(SCREEN_WIDTH / 2 - titleWidth / 2, 120, GetColor(255, 245, 210), STR_TITLE_MAIN);
 
 	SetFontSize(26);
 	const int subWidth = GetDrawStringWidth(STR_TITLE_SUB, -1);
-	DrawFormatString(SCREEN_WIDTH / 2 - subWidth / 2, 200, ::GetColor(200, 210, 255), STR_TITLE_SUB);
+	DrawFormatString(SCREEN_WIDTH / 2 - subWidth / 2, 200, GetColor(200, 210, 255), STR_TITLE_SUB);
 
 	if (m_mode == TitleMode::SelectingDifficulty)
 	{
