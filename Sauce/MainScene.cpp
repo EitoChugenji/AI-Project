@@ -6,7 +6,6 @@
 #include "GameSession.h"
 #include "UiMouse.h"
 #include "DxLib.h"
-#include "LoadingScene.h"
 
 #include <cmath>
 
@@ -1039,11 +1038,7 @@ void MainScene::DrawParticles()
 SceneID MainScene::GetNextSceneID() const
 {
 	if (m_requestGoTitle)  return SceneID::Title;
-	if (m_requestGoResult)
-	{
-		LoadingScene::SetTargetScene(SceneID::Result);
-		return SceneID::Loading;
-	}
+	if (m_requestGoResult) return SceneID::Result;
 	return SceneID::None;
 }
 
