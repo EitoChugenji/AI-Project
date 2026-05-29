@@ -123,6 +123,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\student\Desktop\2年次制作\AI-Project\DxLib_VC\プロジェクトに追加すべきファイル_VC用</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -143,6 +144,7 @@
     <ClCompile Include="Sauce\SettingScene.cpp" />
     <ClCompile Include="Sauce\TitleScene.cpp" />
     <ClCompile Include="Sauce\UiMouse.cpp" />
+    <ClCompile Include="Sauce\LoadingScene.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Sauce\Collision.h" />
@@ -159,6 +161,7 @@
     <ClInclude Include="Sauce\SettingScene.h" />
     <ClInclude Include="Sauce\TitleScene.h" />
     <ClInclude Include="Sauce\UiMouse.h" />
+    <ClInclude Include="Sauce\LoadingScene.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

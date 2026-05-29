@@ -2,10 +2,6 @@
 
 #include <cmath>
 
-// =============================================================================
-// 円と円の当たり判定
-// 中心間の距離が「半径の合計」以下なら当たっている
-// =============================================================================
 bool CheckHitCircleCircle(const CircleCollider& circleA, const CircleCollider& circleB)
 {
 	const float dx = circleB.centerX - circleA.centerX;
@@ -15,10 +11,6 @@ bool CheckHitCircleCircle(const CircleCollider& circleA, const CircleCollider& c
 	return distSq <= radiusSum * radiusSum;
 }
 
-// =============================================================================
-// 矩形と矩形の当たり判定（AABB）
-// どの軸でも重なっていなければ「当たっていない」
-// =============================================================================
 bool CheckHitRectRect(const RectCollider& rectA, const RectCollider& rectB)
 {
 	if (rectA.right < rectB.left) return false;
@@ -28,10 +20,6 @@ bool CheckHitRectRect(const RectCollider& rectA, const RectCollider& rectB)
 	return true;
 }
 
-// =============================================================================
-// 円と矩形の当たり判定
-// 矩形上で円の中心に一番近い点を求め、そこまでの距離と半径を比べる
-// =============================================================================
 bool CheckHitCircleRect(const CircleCollider& circle, const RectCollider& rect)
 {
 	float closestX = circle.centerX;
@@ -67,10 +55,6 @@ RectCollider MakeRectColliderFromCenter(float centerX, float centerY, float half
 	return collider;
 }
 
-// =============================================================================
-// 【参考】円同士がめり込んだときに少し押し返す処理
-// MainScene::ResolveEntityCollisions から呼ぶ想定
-// =============================================================================
 void SeparateCircleCircle(
 	CircleCollider& circleA,
 	CircleCollider& circleB,
@@ -100,13 +84,13 @@ void SeparateCircleCircle(
 	const float nx = dx / dist;
 	const float ny = dy / dist;
 
-	// 位置を半分ずつ押し返す
+	// 重なり量に応じて両オブジェクトの位置を等しく配分して押し戻す
 	circleA.centerX -= nx * overlap * 0.5f;
 	circleA.centerY -= ny * overlap * 0.5f;
 	circleB.centerX += nx * overlap * 0.5f;
 	circleB.centerY += ny * overlap * 0.5f;
 
-	// 速度も法線方向で少し跳ね返す（簡易版）
+	// 押し返しベクトル方向の簡易的な反発力を適用
 	const float bounce = 0.5f;
 	velAX -= nx * bounce;
 	velAY -= ny * bounce;

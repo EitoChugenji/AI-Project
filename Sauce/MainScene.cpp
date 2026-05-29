@@ -6,6 +6,7 @@
 #include "GameSession.h"
 #include "UiMouse.h"
 #include "DxLib.h"
+#include "LoadingScene.h"
 
 #include <cmath>
 
@@ -45,6 +46,15 @@ void MainScene::ResetGame()
 	m_feverTimer = 0;
 	m_idleTimerFrames = 0;
 	m_hitFlashTimer = 0;
+
+	// ポーズ関連
+	m_pauseState     = PauseState::None;
+	m_requestGoTitle = false;
+	m_prevEscKey     = false;
+	m_igSensDragging = false;
+	m_igCurDragging  = false;
+	m_igSensValue    = GameSession::GetMouseSensitivity();
+	m_igCurValue     = GameSession::GetCursorRadius();
 
 	for (int i = 0; i < MAX_FALLING_ENTITIES; ++i) m_entities[i].active = false;
 	for (int i = 0; i < MAX_POPUP_TEXTS; ++i) m_popups[i].active = false;
@@ -191,6 +201,10 @@ void MainScene::UpdateSpawning()
 
 void MainScene::Update()
 {
+	// ポーズ処理（最優先）
+	UpdatePauseMenu();
+	if (m_pauseState != PauseState::None) return;
+
 	if (m_timeLeftSec <= 0) { EndGame(false); return; }
 	UpdateTimer();
 	UpdateSpawning();
@@ -297,32 +311,20 @@ void MainScene::UpdateInput()
 	if (GameSession::GetDebugModeEnabled() && GameSession::GetDebugAutoClick())
 	{
 		const float difficultyBonus = 1.0f + (GetDifficultyProgress() * 1.5f);
-		// Auto-click debug: simulate a click on all entities (including obstacles) with full scoring logic
+		// Auto-click debug: simulate a click on all entities (obstacles excluded) with full scoring logic
 		for (int i = 0; i < MAX_FALLING_ENTITIES; ++i)
 		{
 			GameEntity& entity = m_entities[i];
 			if (!entity.active) continue;
+
+			// 妨害オブジェクトはオートクリックの対象外
+			if (entity.kind == EntityKind::Obstacle) continue;
 
 			// Apply same handling as manual click
 			entity.active = false;
 			m_idleTimerFrames = 0;
 			m_hitFlashTimer = 4;
 
-			if (entity.kind == EntityKind::Obstacle)
-			{
-				// Obstacle penalty (same as manual click)
-				if (GameSession::GetDebugModeEnabled() && GameSession::GetDebugNoTrapPenalty())
-				{
-					SpawnClickEffect(entity.x, entity.y, ::GetColor(100, 255, 100));
-					continue;
-				}
-				m_score = (m_score < OBSTACLE_PENALTY_SCORE) ? 0 : (m_score - OBSTACLE_PENALTY_SCORE);
-				m_timeLeftSec = (m_timeLeftSec < OBSTACLE_PENALTY_TIME_SEC) ? 0 : (m_timeLeftSec - OBSTACLE_PENALTY_TIME_SEC);
-				m_combo = 0; m_comboTimer = 0;
-				SpawnPopup(entity.x, entity.y, CrimeType::Trap);
-				SpawnClickEffect(entity.x, entity.y, ::GetColor(255, 60, 80));
-			}
-			else
 			{
 				int base = (entity.kind == EntityKind::Animal) ? 120 : 35;
 				++m_combo;
@@ -412,6 +414,11 @@ void MainScene::Draw()
 	DrawPopups();
 	DrawParticles();
 	DrawUI();
+
+	// ポーズオーバーレイ（最前面）
+	if (m_pauseState == PauseState::Menu)     DrawPauseOverlay();
+	else if (m_pauseState == PauseState::Settings) DrawInGameSettings();
+
 	// カスタムカーソルを最前面に描画
 	UiMouse::DrawCursor(GameSession::GetCursorRadius(), true);
 }
@@ -1029,4 +1036,297 @@ void MainScene::DrawParticles()
 	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
 }
 
-SceneID MainScene::GetNextSceneID() const { return m_requestGoResult ? SceneID::Result : SceneID::None; }
+SceneID MainScene::GetNextSceneID() const
+{
+	if (m_requestGoTitle)  return SceneID::Title;
+	if (m_requestGoResult)
+	{
+		LoadingScene::SetTargetScene(SceneID::Result);
+		return SceneID::Loading;
+	}
+	return SceneID::None;
+}
+
+// =============================================================================
+// ポーズメニュー
+// =============================================================================
+
+void MainScene::UpdatePauseMenu()
+{
+	// クリック判定フレーム更新（ポーズ中はここで行う）
+	UiMouse::UpdateFrame();
+	const bool escNow = (CheckHitKey(KEY_INPUT_ESCAPE) != 0);
+	const bool escPressed = escNow && !m_prevEscKey;
+	m_prevEscKey = escNow;
+
+	switch (m_pauseState)
+	{
+	case PauseState::None:
+		// ESCキーでポーズを開く
+		if (escPressed)
+		{
+			m_pauseState = PauseState::Menu;
+			m_prevMouseInput = GetMouseInput(); // クリック誤判定防止
+		}
+		break;
+
+	case PauseState::Menu:
+	{
+		// ボタン座標（DrawPauseOverlayと一致させること）
+		const int CX = SCREEN_WIDTH / 2;
+		const int BTN_W = 320;
+		const int BTN_H = 56;
+		const int BTN_X1 = CX - BTN_W / 2;
+		const int BTN_X2 = CX + BTN_W / 2;
+		const int Y_RESUME  = 300;
+		const int Y_SETTING = 380;
+		const int Y_TITLE   = 460;
+
+		if (UiMouse::TryClick(BTN_X1, Y_RESUME,  BTN_X2, Y_RESUME  + BTN_H))
+		{
+			m_pauseState = PauseState::None;
+		}
+		else if (UiMouse::TryClick(BTN_X1, Y_SETTING, BTN_X2, Y_SETTING + BTN_H))
+		{
+			m_pauseState     = PauseState::Settings;
+			m_igSensValue    = GameSession::GetMouseSensitivity();
+			m_igCurValue     = GameSession::GetCursorRadius();
+			m_igSensDragging = false;
+			m_igCurDragging  = false;
+		}
+		else if (UiMouse::TryClick(BTN_X1, Y_TITLE, BTN_X2, Y_TITLE + BTN_H))
+		{
+			m_requestGoTitle = true;
+		}
+		break;
+	}
+
+	case PauseState::Settings:
+		UpdateInGameSettings();
+		break;
+	}
+}
+
+void MainScene::DrawPauseOverlay()
+{
+	// 半透明の暗いオーバーレイ
+	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 180);
+	DrawBox(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ::GetColor(5, 8, 15), TRUE);
+	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+
+	const int CX = SCREEN_WIDTH / 2;
+	const int BTN_W = 320;
+	const int BTN_H = 56;
+	const int BTN_X1 = CX - BTN_W / 2;
+	const int BTN_X2 = CX + BTN_W / 2;
+	const int Y_RESUME  = 300;
+	const int Y_SETTING = 380;
+	const int Y_TITLE   = 460;
+
+	// パネル枠
+	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 210);
+	DrawRoundRect(CX - 220, 220, CX + 220, 560, 16, 16, ::GetColor(12, 20, 35), TRUE);
+	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+	DrawRoundRect(CX - 220, 220, CX + 220, 560, 16, 16, ::GetColor(0, 160, 255), FALSE);
+	DrawRoundRect(CX - 218, 222, CX + 218, 558, 15, 15, ::GetColor(0, 80, 140), FALSE);
+
+	// タイトル「PAUSE」
+	SetFontSize(40);
+	DrawString(CX - 72, 240, L"PAUSE", ::GetColor(0, 220, 255));
+
+	// 区切りライン
+	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 120);
+	DrawLine(CX - 160, 292, CX + 160, 292, ::GetColor(0, 120, 200));
+	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+
+	// マウス座標（ホバー判定用）
+	int mx, my; GetMousePoint(&mx, &my);
+
+	// ボタン描画ラムダ
+	auto drawBtn = [&](int y, const wchar_t* label, unsigned int baseCol, unsigned int hoverCol)
+	{
+		const bool hovered = (mx >= BTN_X1 && mx <= BTN_X2 && my >= y && my <= y + BTN_H);
+		unsigned int col = hovered ? hoverCol : baseCol;
+		int alpha = hovered ? 220 : 160;
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, alpha);
+		DrawRoundRect(BTN_X1, y, BTN_X2, y + BTN_H, 10, 10, col, TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		DrawRoundRect(BTN_X1, y, BTN_X2, y + BTN_H, 10, 10, col, FALSE);
+		SetFontSize(26);
+		// ラベル幅を概算して中央揃え
+		int textW = (int)wcslen(label) * 20;
+		DrawString(CX - textW / 2, y + (BTN_H - 26) / 2, label, ::GetColor(240, 248, 255));
+	};
+
+	drawBtn(Y_RESUME,  L"\u518d\u958b",     ::GetColor(0, 140, 220),  ::GetColor(0, 200, 255));
+	drawBtn(Y_SETTING, L"\u8a2d\u5b9a",     ::GetColor(60, 90, 160),   ::GetColor(80, 130, 255));
+	drawBtn(Y_TITLE,   L"\u30bf\u30a4\u30c8\u30eb", ::GetColor(120, 50, 50), ::GetColor(200, 70, 70));
+}
+
+// =============================================================================
+// ゲーム中設定（ポーズ中のスライダーパネル）
+// =============================================================================
+
+void MainScene::UpdateInGameSettings()
+{
+	// 感度・カーソルサイズのスライダー
+	const int SX1 = 360, SX2 = 920;
+	const int SW  = SX2 - SX1;
+	const int SENS_Y = 350;
+	const int CUR_Y  = 460;
+	const float SENS_MIN = 0.1f, SENS_MAX = 3.0f;
+	const float CUR_MIN  = 4.0f, CUR_MAX  = 60.0f;
+
+	int mx, my; GetMousePoint(&mx, &my);
+	const bool leftDown = (GetMouseInput() & MOUSE_INPUT_LEFT) != 0;
+
+	// 感度スライダー
+	if (leftDown)
+	{
+		if (!m_igSensDragging)
+		{
+			if (mx >= SX1 - 10 && mx <= SX2 + 10 && my >= SENS_Y - 20 && my <= SENS_Y + 20)
+				m_igSensDragging = true;
+		}
+		if (m_igSensDragging)
+		{
+			float r = static_cast<float>(mx - SX1) / SW;
+			if (r < 0.0f) r = 0.0f; if (r > 1.0f) r = 1.0f;
+			m_igSensValue = SENS_MIN + r * (SENS_MAX - SENS_MIN);
+			GameSession::SetMouseSensitivity(m_igSensValue);
+		}
+	}
+	else { m_igSensDragging = false; }
+
+	// 感度 ± ボタン
+	if (UiMouse::TryClick(SX1 - 50, SENS_Y - 20, SX1 - 10, SENS_Y + 20))
+	{
+		m_igSensValue -= 0.05f;
+		if (m_igSensValue < SENS_MIN) m_igSensValue = SENS_MIN;
+		GameSession::SetMouseSensitivity(m_igSensValue);
+	}
+	if (UiMouse::TryClick(SX2 + 10, SENS_Y - 20, SX2 + 50, SENS_Y + 20))
+	{
+		m_igSensValue += 0.05f;
+		if (m_igSensValue > SENS_MAX) m_igSensValue = SENS_MAX;
+		GameSession::SetMouseSensitivity(m_igSensValue);
+	}
+
+	// カーソルスライダー
+	if (leftDown)
+	{
+		if (!m_igCurDragging)
+		{
+			if (mx >= SX1 - 10 && mx <= SX2 + 10 && my >= CUR_Y - 20 && my <= CUR_Y + 20)
+				m_igCurDragging = true;
+		}
+		if (m_igCurDragging)
+		{
+			float r = static_cast<float>(mx - SX1) / SW;
+			if (r < 0.0f) r = 0.0f; if (r > 1.0f) r = 1.0f;
+			m_igCurValue = CUR_MIN + r * (CUR_MAX - CUR_MIN);
+			GameSession::SetCursorRadius(m_igCurValue);
+		}
+	}
+	else { m_igCurDragging = false; }
+
+	// カーソルサイズ ± ボタン
+	if (UiMouse::TryClick(SX1 - 50, CUR_Y - 20, SX1 - 10, CUR_Y + 20))
+	{
+		m_igCurValue -= 2.0f;
+		if (m_igCurValue < CUR_MIN) m_igCurValue = CUR_MIN;
+		GameSession::SetCursorRadius(m_igCurValue);
+	}
+	if (UiMouse::TryClick(SX2 + 10, CUR_Y - 20, SX2 + 50, CUR_Y + 20))
+	{
+		m_igCurValue += 2.0f;
+		if (m_igCurValue > CUR_MAX) m_igCurValue = CUR_MAX;
+		GameSession::SetCursorRadius(m_igCurValue);
+	}
+
+	// 「保存して戻る」ボタン
+	const int CX = SCREEN_WIDTH / 2;
+	if (UiMouse::TryClick(CX - 160, 540, CX + 160, 590))
+	{
+		GameSession::SaveConfig();
+		m_pauseState = PauseState::Menu;
+	}
+}
+
+void MainScene::DrawInGameSettings()
+{
+	// 半透明オーバーレイ
+	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 190);
+	DrawBox(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, ::GetColor(5, 8, 15), TRUE);
+	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+
+	const int CX = SCREEN_WIDTH / 2;
+
+	// パネル
+	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 220);
+	DrawRoundRect(200, 150, SCREEN_WIDTH - 200, 620, 16, 16, ::GetColor(12, 20, 35), TRUE);
+	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+	DrawRoundRect(200, 150, SCREEN_WIDTH - 200, 620, 16, 16, ::GetColor(80, 130, 255), FALSE);
+
+	SetFontSize(36);
+	DrawString(CX - 60, 170, L"\u8a2d\u5b9a", ::GetColor(160, 200, 255));
+
+	const int SX1 = 360, SX2 = 920, SW = SX2 - SX1;
+	const int SENS_Y = 350;
+	const int CUR_Y  = 460;
+	const float SENS_MIN = 0.1f, SENS_MAX = 3.0f;
+	const float CUR_MIN  = 4.0f, CUR_MAX  = 60.0f;
+
+	// 感度スライダー
+	SetFontSize(22);
+	DrawFormatString(CX - 180, 290, ::GetColor(220, 230, 255), L"\u30de\u30a6\u30b9\u611f\u5ea6: %.2f", m_igSensValue);
+	{
+		int knobX = SX1 + static_cast<int>(SW * ((m_igSensValue - SENS_MIN) / (SENS_MAX - SENS_MIN)));
+		DrawBox(SX1, SENS_Y - 4, SX2, SENS_Y + 4, ::GetColor(50, 60, 80), TRUE);
+		DrawBox(SX1, SENS_Y - 4, knobX, SENS_Y + 4, ::GetColor(80, 180, 255), TRUE);
+		DrawCircle(knobX, SENS_Y, 13, ::GetColor(255, 210, 80), TRUE);
+		DrawCircle(knobX, SENS_Y, 13, ::GetColor(255, 255, 255), FALSE);
+		// ± ボタン
+		UiMouse::DrawButton(SX1 - 50, SENS_Y - 20, SX1 - 10, SENS_Y + 20, L"-");
+		UiMouse::DrawButton(SX2 + 10, SENS_Y - 20, SX2 + 50, SENS_Y + 20, L"+");
+	}
+
+	// カーソルサイズスライダー
+	DrawFormatString(CX - 200, 400, ::GetColor(220, 230, 255), L"\u30ab\u30fc\u30bd\u30eb\u534a\u5f84: %.0f px", m_igCurValue);
+	{
+		int knobX = SX1 + static_cast<int>(SW * ((m_igCurValue - CUR_MIN) / (CUR_MAX - CUR_MIN)));
+		DrawBox(SX1, CUR_Y - 4, SX2, CUR_Y + 4, ::GetColor(50, 60, 80), TRUE);
+		DrawBox(SX1, CUR_Y - 4, knobX, CUR_Y + 4, ::GetColor(100, 255, 160), TRUE);
+		DrawCircle(knobX, CUR_Y, 13, ::GetColor(100, 255, 160), TRUE);
+		DrawCircle(knobX, CUR_Y, 13, ::GetColor(255, 255, 255), FALSE);
+		// ± ボタン
+		UiMouse::DrawButton(SX1 - 50, CUR_Y - 20, SX1 - 10, CUR_Y + 20, L"-");
+		UiMouse::DrawButton(SX2 + 10, CUR_Y - 20, SX2 + 50, CUR_Y + 20, L"+");
+	}
+
+	// カーソルサイズのプレビュー
+	{
+		const int previewX = CX + 250;
+		const int previewY = CUR_Y + 90; // moved further down to avoid UI overlap
+		SetFontSize(16);
+		DrawFormatString(previewX - 30, previewY - 26, ::GetColor(160, 180, 220), L"\u30d7\u30ec\u30d3\u30e5\u30fc");
+		const int pr = static_cast<int>(m_igCurValue);
+		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 55);
+		DrawCircle(previewX, previewY, pr, ::GetColor(100, 200, 255), TRUE);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+		DrawCircle(previewX, previewY, pr, ::GetColor(80, 180, 255), FALSE);
+		DrawCircle(previewX, previewY, 5, ::GetColor(255, 255, 255), TRUE);
+	}
+
+	// 保存ボタン
+	const bool hovered = UiMouse::IsOver(CX - 160, 540, CX + 160, 590);
+	unsigned int btnCol = hovered ? ::GetColor(0, 200, 120) : ::GetColor(0, 140, 90);
+	SetDrawBlendMode(DX_BLENDMODE_ALPHA, hovered ? 220 : 160);
+	DrawRoundRect(CX - 160, 540, CX + 160, 590, 10, 10, btnCol, TRUE);
+	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+	DrawRoundRect(CX - 160, 540, CX + 160, 590, 10, 10, btnCol, FALSE);
+	SetFontSize(22);
+	DrawString(CX - 110, 553, L"\u4fdd\u5b58\u3057\u3066\u30e1\u30cb\u30e5\u30fc\u306b\u623b\u308b", ::GetColor(240, 255, 248));
+
+	// ESCヒント removed
+}

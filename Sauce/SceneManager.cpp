@@ -6,6 +6,7 @@
 #include "RankingScene.h"
 #include "RankingManager.h"
 #include "SettingScene.h"
+#include "LoadingScene.h"
 #include "GameConfig.h"
 #include "GameSession.h"
 #include "DxLib.h"
@@ -169,6 +170,9 @@ SceneBase* SceneManager::CreateScene(SceneID sceneID)
 
 	case SceneID::Setting:
 		return new SettingScene();
+
+	case SceneID::Loading:
+		return new LoadingScene();
 
 	default:
 		// 想定外のIDのときはタイトルにフォールバック

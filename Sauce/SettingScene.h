@@ -1,21 +1,18 @@
 ﻿#pragma once
 #include "SceneBase.h"
 
-// =============================================================================
-// SettingScene.h
-// マウス感度・カーソルサイズなどの設定を行うシーン
-// =============================================================================
-
+// マウス感度とカーソルサイズを変更できる設定シーン
+// スライダーとボタンで値を調整し、保存してタイトルに戻る
 class SettingScene : public SceneBase
 {
 public:
 	SettingScene();
-	~SettingScene() override; // 環境によっては override を外してください
+	~SettingScene() override;
 
-	void Init() override;
+	void Init() /*override*/;
 	void Update() override;
 	void Draw() override;
-	SceneID GetNextSceneID() const override;
+	SceneID GetNextSceneID() const /*override*/;
 
 private:
 	float m_mouseSensitivity;

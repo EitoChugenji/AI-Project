@@ -81,10 +81,10 @@ enum class PauseState { None, Menu, Settings };
 class MainScene : public SceneBase
 {
 public:
-	void Init() override;
+	void Init() /*override*/;
 	void Update() override;
 	void Draw() override;
-	SceneID GetNextSceneID() const override;
+	SceneID GetNextSceneID() const /*override*/;
 
 private:
 	void ResetGame();
