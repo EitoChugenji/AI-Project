@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // シーン遷移用の識別ID定義
 enum class SceneID

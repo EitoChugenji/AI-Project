@@ -1,4 +1,4 @@
-#include "RankingScene.h"
+﻿#include "RankingScene.h"
 
 #include "GameConfig.h"
 #include "GameStrings.h"

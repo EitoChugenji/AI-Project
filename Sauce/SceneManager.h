@@ -4,7 +4,7 @@
 
 // シーンの生成・保持・切り替えを一元管理するクラス
 // 毎フレーム Update/Draw を呼び出し、シーン側が返す遷移先IDで自動切替する
-class SceneManager : public SceneBase
+class SceneManager
 {
 public:
 	SceneManager();
