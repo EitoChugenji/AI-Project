@@ -2,38 +2,37 @@
 
 #include "SceneBase.h"
 
-// =============================================================================
-// SceneManager.h
-// 現在表示中のシーンを1つだけ保持し、
-// 「更新」「描画」「シーン切り替え」をまとめて行うクラスです。
-//
-// 【シーン遷移の流れ（このゲーム）】
-//   タイトル → メイン → リザルト
-//   （リザルトからタイトルに戻る処理も各シーン側で指定します）
-// =============================================================================
-
+// シーンの生成・保持・切り替えを一元管理するクラス
+// 毎フレーム Update/Draw を呼び出し、シーン側が返す遷移先IDで自動切替する
 class SceneManager
 {
 public:
 	SceneManager();
 	~SceneManager();
 
-	// 最初に表示するシーンをセット（WinMain から1回呼ぶ）
+	// ゲーム起動時に1回だけ呼ぶ。ランキング読込後、初期シーンを生成する
+	// 入力: 最初に表示するシーンID
+	// 出力: なし
+	// 副作用: RankingManager::Load、GameSession::LoadConfig を実行する
 	void SetFirstScene(SceneID firstSceneID);
 
-	// 毎フレーム呼ぶ：現在シーンの Update → 必要ならシーン切り替え
+	// 毎フレーム呼ぶ。現在シーンのUpdate後、遷移先があれば切り替えを行う
+	// 副作用: マウス感度スケーリング処理、シーン切り替え
 	void Update();
 
-	// 毎フレーム呼ぶ：現在シーンの Draw
+	// 毎フレーム呼ぶ。現在シーンのDrawを委譲する
 	void Draw();
 
 private:
-	// 今動いているシーンへのポインタ
+	// 現在アクティブなシーンへのポインタ
 	SceneBase* m_currentScene;
 
-	// 指定IDのシーンオブジェクトを新しく作る（内部用）
+	// シーンIDからシーンオブジェクトを生成して返す（新規シーン追加時はここに case を追加する）
+	// 入力: 生成したいシーンID
+	// 出力: new で生成した SceneBase* （未知IDの場合は TitleScene にフォールバック）
 	SceneBase* CreateScene(SceneID sceneID);
 
-	// 今のシーンを破棄して、新しいシーンに切り替える（内部用）
+	// 現在シーンを破棄して新しいシーンに切り替える
+	// 副作用: m_currentScene の delete と Init 呼び出し
 	void ChangeScene(SceneID nextSceneID);
 };

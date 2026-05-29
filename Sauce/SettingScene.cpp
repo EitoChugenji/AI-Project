@@ -4,22 +4,22 @@
 #include "GameSession.h"
 #include "UiMouse.h"
 
-// スライダーのレイアウト定数
+// スライダーのレイアウト定数（SettingScene.cpp 内の両スライダーで共有）
 namespace
 {
 	const int SLIDER_X_START = 440;
 	const int SLIDER_X_END   = 840;
 	const int SLIDER_WIDTH   = SLIDER_X_END - SLIDER_X_START;
 
-	// 感度スライダー
-	const int SENS_SLIDER_Y  = 310;
-	const float SENS_MIN     = 0.1f;
-	const float SENS_MAX     = 3.0f;
+	// 感度スライダーの数値範囲
+	const int SENS_SLIDER_Y = 310;
+	const float SENS_MIN    = 0.1f;
+	const float SENS_MAX    = 3.0f;
 
-	// カーソルサイズスライダー
-	const int CUR_SLIDER_Y   = 430;
-	const float CUR_MIN      = 4.0f;
-	const float CUR_MAX      = 60.0f;
+	// カーソルサイズスライダーの数値範囲
+	const int CUR_SLIDER_Y  = 430;
+	const float CUR_MIN     = 4.0f;
+	const float CUR_MAX     = 60.0f;
 }
 
 SettingScene::SettingScene()
@@ -29,10 +29,12 @@ SettingScene::SettingScene()
 	, m_isDraggingCursorSlider(false)
 	, m_requestGoTitle(false)
 {
+
 }
 
 SettingScene::~SettingScene()
 {
+
 }
 
 void SettingScene::Init()
@@ -53,9 +55,7 @@ void SettingScene::Update()
 	const int mouseInput  = GetMouseInput();
 	const bool leftPressed = (mouseInput & MOUSE_INPUT_LEFT) != 0;
 
-	// ==============================
 	// 感度スライダー
-	// ==============================
 	if (leftPressed)
 	{
 		if (!m_isDraggingSlider)
@@ -66,6 +66,7 @@ void SettingScene::Update()
 				m_isDraggingSlider = true;
 			}
 		}
+
 		if (m_isDraggingSlider)
 		{
 			float ratio = static_cast<float>(mx - SLIDER_X_START) / static_cast<float>(SLIDER_WIDTH);
@@ -75,6 +76,7 @@ void SettingScene::Update()
 			GameSession::SetMouseSensitivity(m_mouseSensitivity);
 		}
 	}
+	// マウスボタンが離れたらドラッグ状態を解除する
 	else
 	{
 		m_isDraggingSlider = false;
@@ -83,10 +85,11 @@ void SettingScene::Update()
 	// 感度 ± ボタン
 	if (UiMouse::TryClick(380, SENS_SLIDER_Y - 20, 420, SENS_SLIDER_Y + 20))
 	{
-		m_mouseSensitivity -= 0.05f;
+		m_mouseSensitivity -= 0.01f;
 		if (m_mouseSensitivity < SENS_MIN) m_mouseSensitivity = SENS_MIN;
 		GameSession::SetMouseSensitivity(m_mouseSensitivity);
 	}
+
 	if (UiMouse::TryClick(860, SENS_SLIDER_Y - 20, 900, SENS_SLIDER_Y + 20))
 	{
 		m_mouseSensitivity += 0.05f;
@@ -94,9 +97,7 @@ void SettingScene::Update()
 		GameSession::SetMouseSensitivity(m_mouseSensitivity);
 	}
 
-	// ==============================
 	// カーソルサイズスライダー
-	// ==============================
 	if (leftPressed)
 	{
 		if (!m_isDraggingCursorSlider)
@@ -107,6 +108,7 @@ void SettingScene::Update()
 				m_isDraggingCursorSlider = true;
 			}
 		}
+
 		if (m_isDraggingCursorSlider)
 		{
 			float ratio = static_cast<float>(mx - SLIDER_X_START) / static_cast<float>(SLIDER_WIDTH);
@@ -116,6 +118,7 @@ void SettingScene::Update()
 			GameSession::SetCursorRadius(m_cursorRadius);
 		}
 	}
+	// マウスボタンが離れたらドラッグ状態を解除する
 	else
 	{
 		m_isDraggingCursorSlider = false;
@@ -128,6 +131,7 @@ void SettingScene::Update()
 		if (m_cursorRadius < CUR_MIN) m_cursorRadius = CUR_MIN;
 		GameSession::SetCursorRadius(m_cursorRadius);
 	}
+
 	if (UiMouse::TryClick(860, CUR_SLIDER_Y - 20, 900, CUR_SLIDER_Y + 20))
 	{
 		m_cursorRadius += 2.0f;
@@ -135,37 +139,40 @@ void SettingScene::Update()
 		GameSession::SetCursorRadius(m_cursorRadius);
 	}
 
-	// デバッグモード切り替え
-	if (UiMouse::TryClick(390, 480, 500, 510))
-	{
-		GameSession::SetDebugModeEnabled(!GameSession::GetDebugModeEnabled());
-	}
+	//// デバッグモード切り替え
+	//if (UiMouse::TryClick(390, 480, 500, 510))
+	//{
+	//	GameSession::SetDebugModeEnabled(!GameSession::GetDebugModeEnabled());
+	//}
 
-	if (GameSession::GetDebugModeEnabled())
-	{
-		// 中央オートクリック
-		if (UiMouse::TryClick(520, 480, 730, 510))
-		{
-			GameSession::SetDebugAutoClick(!GameSession::GetDebugAutoClick());
-		}
-		// コンボ維持
-		if (UiMouse::TryClick(750, 480, 960, 510))
-		{
-			GameSession::SetDebugNoComboBreak(!GameSession::GetDebugNoComboBreak());
-		}
-		// 時間停止
-		if (UiMouse::TryClick(390, 525, 600, 555))
-		{
-			GameSession::SetDebugInfiniteTime(!GameSession::GetDebugInfiniteTime());
-		}
-		// 罠無効
-		if (UiMouse::TryClick(620, 525, 830, 555))
-		{
-			GameSession::SetDebugNoTrapPenalty(!GameSession::GetDebugNoTrapPenalty());
-		}
-	}
+	//if (GameSession::GetDebugModeEnabled())
+	//{
+	//	// 中央オートクリック
+	//	if (UiMouse::TryClick(520, 480, 730, 510))
+	//	{
+	//		GameSession::SetDebugAutoClick(!GameSession::GetDebugAutoClick());
+	//	}
+	// 
+	//	// コンボ維持
+	//	if (UiMouse::TryClick(750, 480, 960, 510))
+	//	{
+	//		GameSession::SetDebugNoComboBreak(!GameSession::GetDebugNoComboBreak());
+	//	}
+	// 
+	//	// 時間停止
+	//	if (UiMouse::TryClick(390, 525, 600, 555))
+	//	{
+	//		GameSession::SetDebugInfiniteTime(!GameSession::GetDebugInfiniteTime());
+	//	}
+	// 
+	//	// 罠無効
+	//	if (UiMouse::TryClick(620, 525, 830, 555))
+	//	{
+	//		GameSession::SetDebugNoTrapPenalty(!GameSession::GetDebugNoTrapPenalty());
+	//	}
+	//}
 
-	// 保存して戻るボタン（デバッグ表示のため y=590-640 へ移動）
+	// 設定を保存してからタイトルに戻る（SaveConfig で .ini 等に永続化）
 	if (UiMouse::TryClick(440, 590, 840, 640))
 	{
 		GameSession::SaveConfig();
@@ -226,21 +233,24 @@ void SettingScene::Draw()
 		UiMouse::DrawButton(860, CUR_SLIDER_Y - 20, 900, CUR_SLIDER_Y + 20, L"+");
 	}
 
-	// カーソルサイズのプレビュー（右端に小さく表示）
+	// カーソルサイズを変更しながらプレビューで即確認できるよう右端に表示する
 	{
 		const int previewX = 1050;
 		const int previewY = CUR_SLIDER_Y;
 		SetFontSize(16);
 		DrawFormatString(previewX - 30, previewY - 50, GetColor(180, 180, 180), L"プレビュー");
+
 		// 当たり判定円
 		const int pr = static_cast<int>(m_cursorRadius);
 		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 55);
 		DrawCircle(previewX, previewY, pr, GetColor(100, 200, 255), TRUE);
 		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
 		DrawCircle(previewX, previewY, pr, GetColor(80, 180, 255), FALSE);
+
 		// 中心
 		DrawCircle(previewX, previewY, 5, GetColor(255, 255, 255), TRUE);
 		DrawCircle(previewX, previewY, 5, GetColor(0, 0, 0), FALSE);
+
 		// 十字線
 		DrawLine(previewX - 12, previewY, previewX - 6, previewY, GetColor(255, 255, 255));
 		DrawLine(previewX + 6,  previewY, previewX + 12, previewY, GetColor(255, 255, 255));
@@ -251,36 +261,37 @@ void SettingScene::Draw()
 	// ==============================
 	// デバッグモードパネル
 	// ==============================
-	{
-		// パネル背景（半透明赤）
-		SetDrawBlendMode(DX_BLENDMODE_ALPHA, 100);
-		DrawRoundRect(220, 470, 1060, 575, 8, 8, GetColor(35, 15, 15), TRUE);
-		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
-		DrawRoundRect(220, 470, 1060, 575, 8, 8, GetColor(255, 80, 80), FALSE);
+	//{
+	//	// パネル背景（半透明赤）
+	//	SetDrawBlendMode(DX_BLENDMODE_ALPHA, 100);
+	//	DrawRoundRect(220, 470, 1060, 575, 8, 8, GetColor(35, 15, 15), TRUE);
+	//	SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
+	//	DrawRoundRect(220, 470, 1060, 575, 8, 8, GetColor(255, 80, 80), FALSE);
 
-		SetFontSize(20);
-		DrawFormatString(240, 485, GetColor(255, 200, 200), L"デバッグ機能:");
+	//	SetFontSize(20);
+	//	DrawFormatString(240, 485, GetColor(255, 200, 200), L"デバッグ機能:");
 
-		// メインスイッチ
-		UiMouse::DrawButton(390, 480, 500, 510, GameSession::GetDebugModeEnabled() ? L"有効" : L"無効");
+	//	// メインスイッチ
+	//	UiMouse::DrawButton(390, 480, 500, 510, GameSession::GetDebugModeEnabled() ? L"有効" : L"無効");
 
-		if (GameSession::GetDebugModeEnabled())
-		{
-			// 中央オートクリック
-			UiMouse::DrawButton(520, 480, 730, 510, GameSession::GetDebugAutoClick() ? L"オート:ON" : L"オート:OFF");
-			// コンボ維持
-			UiMouse::DrawButton(750, 480, 960, 510, GameSession::GetDebugNoComboBreak() ? L"コンボ維持:ON" : L"コンボ維持:OFF");
-			// 時間停止
-			UiMouse::DrawButton(390, 525, 600, 555, GameSession::GetDebugInfiniteTime() ? L"時間停止:ON" : L"時間停止:OFF");
-			// 罠無効
-			UiMouse::DrawButton(620, 525, 830, 555, GameSession::GetDebugNoTrapPenalty() ? L"罠無効:ON" : L"罠無効:OFF");
-		}
-		else
-		{
-			SetFontSize(18);
-			DrawFormatString(520, 486, GetColor(150, 120, 120), L"※デバッグを「有効」にすると機能切り替えが可能になります。");
-		}
-	}
+	//	if (GameSession::GetDebugModeEnabled())
+	//	{
+	//		// 中央オートクリック
+	//		UiMouse::DrawButton(520, 480, 730, 510, GameSession::GetDebugAutoClick() ? L"オート:ON" : L"オート:OFF");
+	//		// コンボ維持
+	//		UiMouse::DrawButton(750, 480, 960, 510, GameSession::GetDebugNoComboBreak() ? L"コンボ維持:ON" : L"コンボ維持:OFF");
+	//		// 時間停止
+	//		UiMouse::DrawButton(390, 525, 600, 555, GameSession::GetDebugInfiniteTime() ? L"時間停止:ON" : L"時間停止:OFF");
+	//		// 罠無効
+	//		UiMouse::DrawButton(620, 525, 830, 555, GameSession::GetDebugNoTrapPenalty() ? L"罠無効:ON" : L"罠無効:OFF");
+	//	}
+	// 
+	//	else
+	//	{
+	//		SetFontSize(18);
+	//		DrawFormatString(520, 486, GetColor(150, 120, 120), L"※デバッグを「有効」にすると機能切り替えが可能になります。");
+	//	}
+	//}
 
 	// 保存して戻るボタン
 	UiMouse::DrawButton(440, 590, 840, 640, L"保存してタイトルに戻る");
@@ -295,5 +306,6 @@ SceneID SettingScene::GetNextSceneID() const
 	{
 		return SceneID::Title;
 	}
+
 	return SceneID::None;
-}
+}

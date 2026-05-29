@@ -1,4 +1,4 @@
-#include "RankingManager.h"
+﻿#include "RankingManager.h"
 
 #include "DxLib.h"
 

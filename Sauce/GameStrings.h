@@ -1,11 +1,14 @@
 ﻿#pragma once
 
-// ゲームタイトル … 『Gravity Clicker』
+// ウィンドウタイトル
 #define STR_WINDOW_TITLE \
 	L"Gravity Clicker"
 
+// タイトル画面
 #define STR_TITLE_MAIN      L"Gravity Clicker"
 #define STR_TITLE_SUB       L"\u964D\u308A\u3066\u304F\u308B\u30AA\u30D6\u30B8\u30A7\u30AF\u30C8\u3092\u30AF\u30EA\u30C3\u30AF!"
+
+// メニューボタン
 #define STR_BTN_PLAY            L"\u30B2\u30FC\u30E0\u958B\u59CB"
 #define STR_BTN_PLAY_NORMAL     L"\u30B2\u30FC\u30E0\u958B\u59CB\uFF08\u3075\u3064\u3046\uFF09"
 #define STR_BTN_PLAY_EASY       L"\u30B2\u30FC\u30E0\u958B\u59CB\uFF08\u3084\u3055\u3057\u3044\uFF09"
@@ -22,7 +25,7 @@
 #define STR_BTN_QUIT            L"\u7D42\u4E86"
 #define STR_BTN_CLEAR_DATA      L"\u30C7\u30FC\u30BF\u3092\u524A\u9664"
 
-// メイン画面 UI
+// メインシーンHUD
 #define STR_MAIN_TIMER      L"\u6B8B\u308A: %d\u79D2"
 #define STR_MAIN_SCORE      L"\u30AB\u30AA\u30B9\u30DD\u30A4\u30F3\u30C8: %d"
 #define STR_MAIN_COMBO      L"COMBO x%d"
@@ -33,13 +36,13 @@
 #define STR_MAIN_HIT_FLASH  L"\u30D2\u30C3\u30C8!"
 #define STR_CRIME_TRAP      L"\u30C8\u30E9\u30C3\u30D7! \u30B3\u30F3\u30DC\u5207\u308C\u30FB\u30B9\u30B3\u30A2\u6E1B"
 
-// タップ時のポップアップ（裏の凶行）
+// クリック時のポップアップ（各クリック対象の「正体」）
 #define STR_CRIME_HACK      L"\u30CF\u30C3\u30AD\u30F3\u30B0\u9632\u6B62!"
 #define STR_CRIME_BOMB      L"\u7206\u5F39\u89E3\u4F53!"
 #define STR_CRIME_RITUAL    L"\u7981\u5FCC\u306E\u5100\u5F0F\u7834\u58CA!"
 #define STR_CRIME_SNACK     L"\u79D8\u5BC6\u306E\u304A\u83D3\u5B50\u5077\u98DF\u9632\u6B62!"
 
-// リザルト
+// リザルト画面
 #define STR_RESULT_TITLE    L"\u304A\u3064\u304B\u308C\u3055\u307E"
 #define STR_RESULT_SCORE    L"\u30AB\u30AA\u30B9\u30DD\u30A4\u30F3\u30C8: %d"
 #define STR_RESULT_COMBO    L"\u6700\u5927COMBO: x%d"
@@ -50,6 +53,7 @@
 #define STR_NAME_KEY_BACK       L"\u6D88\u3059"
 #define STR_NAME_KEY_CLEAR      L"\u3059\u3079\u3066\u6D88\u3059"
 
+// ランキング画面
 #define STR_RANKING_TITLE       L"\u30E9\u30F3\u30AD\u30F3\u30B0"
 #define STR_RANKING_HEADER      L"\u9806\u4F4D  \u540D\u524D          \u30B9\u30B3\u30A2  \u6700\u5927COMBO"
 #define STR_RANKING_COL_RANK    L"\u9806\u4F4D"

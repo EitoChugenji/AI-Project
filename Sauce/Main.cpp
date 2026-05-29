@@ -20,6 +20,9 @@ int WINAPI WinMain(
 		return -1;
 	}
 
+	// 起動のたびにヒント選択や障害物の配置パターンをランダマイズするため
+	SRand(GetNowCount());
+
 	SetWaitVSyncFlag(TRUE);
 
 	// OSのカーソルを非表示にしてカスタムカーソルで代替する

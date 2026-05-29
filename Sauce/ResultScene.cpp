@@ -98,7 +98,7 @@ void ResultScene::Draw()
 		STR_BTN_SAVE_RANKING,
 		m_nameInput.HasText());
 	UiMouse::DrawButton(BTN_LEFT, BTN_TITLE_TOP, BTN_RIGHT, BTN_TITLE_BOTTOM, STR_BTN_TO_TITLE);
-	// カスタムカーソル
+	// カスタムカーソルを最前面に描画（当たり判定円はリザルトで非表示）
 	UiMouse::DrawCursor(GameSession::GetCursorRadius(), false);
 }
 
